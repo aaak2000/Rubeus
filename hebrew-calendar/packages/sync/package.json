@@ -1,0 +1,31 @@
+{
+  "name": "@hcal/sync",
+  "version": "0.1.0",
+  "description": "Calendar sync engine and provider adapters (ICS, Google, Microsoft, CalDAV).",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@hcal/core": "workspace:*",
+    "ical.js": "^2.1.0",
+    "ics": "^3.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

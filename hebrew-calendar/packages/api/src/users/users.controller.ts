@@ -1,0 +1,25 @@
+import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { AuthUser } from '../auth/dto';
+import { UsersService } from './users.service';
+import { UpdateSettingsDto } from './dto';
+
+@ApiTags('users')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Controller('me')
+export class UsersController {
+  constructor(private readonly users: UsersService) {}
+
+  @Get()
+  profile(@CurrentUser() user: AuthUser) {
+    return this.users.profile(user.userId);
+  }
+
+  @Patch('settings')
+  updateSettings(@CurrentUser() user: AuthUser, @Body() dto: UpdateSettingsDto) {
+    return this.users.updateSettings(user.userId, dto);
+  }
+}
