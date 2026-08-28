@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hcal-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hcal
+      POSTGRES_PASSWORD: hcal
+      POSTGRES_DB: hcal
+    ports:
+      - "5432:5432"
+    volumes:
+      - hcal_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hcal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  hcal_pgdata:
