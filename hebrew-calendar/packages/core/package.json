@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "Hebrew calendar core: date conversion, holidays, zmanim, and Hebrew-date recurrence.",
   "license": "MIT",
-  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

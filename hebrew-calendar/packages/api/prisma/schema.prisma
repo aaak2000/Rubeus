@@ -1,0 +1,131 @@
+// Prisma schema for the Hebrew calendar system.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Provider {
+  google
+  microsoft
+  caldav
+}
+
+enum HebrewRecurrenceKind {
+  yahrzeit
+  birthday
+  anniversary
+}
+
+model User {
+  id           String               @id @default(cuid())
+  email        String               @unique
+  passwordHash String
+  displayName  String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  settings     UserSettings?
+  calendars    Calendar[]
+  connections  ProviderConnection[]
+}
+
+/// Per-user preferences, including the location used for zmanim.
+model UserSettings {
+  id            String  @id @default(cuid())
+  userId        String  @unique
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  il            Boolean @default(false)
+  latitude      Float?
+  longitude     Float?
+  tzid          String  @default("Asia/Jerusalem")
+  elevation     Float?
+  candleMinutes Int     @default(18)
+  locale        String  @default("he")
+}
+
+model Calendar {
+  id           String              @id @default(cuid())
+  userId       String
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  color        String?
+  isDefault    Boolean             @default(false)
+  /// When this calendar mirrors an external provider calendar.
+  connectionId String?
+  connection   ProviderConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  providerCalendarId String?
+  events       Event[]
+  mappings     SyncMapping[]
+  syncStates   SyncState[]
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  calendarId  String
+  calendar    Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  location    String?
+  /// Anchor instants stored in UTC.
+  startUtc    DateTime
+  endUtc      DateTime
+  allDay      Boolean  @default(false)
+  /// Standard iCalendar recurrence (Gregorian), if any.
+  rrule       String?
+  /// Hebrew-date recurrence: kind + the original Gregorian date it anchors on.
+  hebrewRecurrence     HebrewRecurrenceKind?
+  hebrewRecurrenceDate DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([calendarId, startUtc])
+}
+
+/// A linked external calendar account (OAuth tokens stored encrypted).
+model ProviderConnection {
+  id             String     @id @default(cuid())
+  userId         String
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider       Provider
+  accountEmail   String?
+  accessTokenEnc String
+  refreshTokenEnc String?
+  expiresAt      DateTime?
+  scope          String?
+  /// CalDAV collection URL (caldav provider only).
+  caldavUrl      String?
+  calendars      Calendar[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+/// Maps one local event to its counterpart in a provider calendar.
+model SyncMapping {
+  id             String   @id @default(cuid())
+  calendarId     String
+  calendar       Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  localEventId   String
+  providerId     String
+  etag           String?
+  lastSyncedHash String?
+  updatedAt      DateTime @updatedAt
+
+  @@unique([calendarId, localEventId])
+  @@unique([calendarId, providerId])
+}
+
+/// Incremental sync cursor per calendar.
+model SyncState {
+  id         String   @id @default(cuid())
+  calendarId String
+  calendar   Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  token      String?
+  updatedAt  DateTime @updatedAt
+
+  @@unique([calendarId])
+}

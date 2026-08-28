@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "Calendar sync engine and provider adapters (ICS, Google, Microsoft, CalDAV).",
   "license": "MIT",
-  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
