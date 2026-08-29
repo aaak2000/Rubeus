@@ -6,6 +6,7 @@
  */
 export * from './types.js';
 export * from './dateUtils.js';
+export * from './timezone.js';
 export { HebrewDateService, hebrewDateService } from './HebrewDateService.js';
 export { HolidayService, holidayService } from './HolidayService.js';
 export type { HolidayQueryOptions } from './HolidayService.js';

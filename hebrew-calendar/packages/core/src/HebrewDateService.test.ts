@@ -38,3 +38,35 @@ describe('HebrewDateService', () => {
     expect(svc.isValidGregorian('not-a-date')).toBe(false);
   });
 });
+
+describe('HebrewDateService.at — sunset boundary', () => {
+  const JLM = 'Asia/Jerusalem';
+  const jerusalem = {
+    latitude: 31.7683,
+    longitude: 35.2137,
+    tzid: JLM,
+    il: true,
+    name: 'Jerusalem',
+  };
+
+  it('keeps the calendar day before sunset', () => {
+    // 2024-06-21 12:00 IDT = 09:00Z, well before sunset (~19:47 IDT)
+    const r = svc.at(new Date('2024-06-21T09:00:00Z'), JLM, jerusalem);
+    expect(r.afterSunset).toBe(false);
+    expect(r.gregorian).toBe('2024-06-21');
+  });
+
+  it('advances to the next Hebrew day after sunset', () => {
+    // 2024-06-21 21:00 IDT = 18:00Z, after sunset
+    const before = svc.at(new Date('2024-06-21T09:00:00Z'), JLM, jerusalem);
+    const after = svc.at(new Date('2024-06-21T18:00:00Z'), JLM, jerusalem);
+    expect(after.afterSunset).toBe(true);
+    expect(after.hebrew.day).toBe(before.hebrew.day + 1);
+  });
+
+  it('falls back to the calendar day when no location is known', () => {
+    const r = svc.at(new Date('2024-06-21T18:00:00Z'), JLM);
+    expect(r.afterSunset).toBe(false);
+    expect(r.gregorian).toBe('2024-06-21');
+  });
+});

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, type Calendar, type EventInstance } from '../api/client';
+import { localTimeZone } from '@hcal/core';
 import { buildMonthGrid, HEBREW_WEEKDAYS, zmanimFor, type GridDay } from '../hebrew';
 import { EventModal } from '../components/EventModal';
 
@@ -18,6 +19,7 @@ export function CalendarPage() {
   const [il, setIl] = useState(false);
   const [modalDate, setModalDate] = useState<string | null>(null);
   const [geo, setGeo] = useState<{ lat: number; lon: number; tzid: string } | null>(null);
+  const [tzid, setTzid] = useState<string>(localTimeZone());
   const [selected, setSelected] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [editing, setEditing] = useState<EventInstance | null>(null);
@@ -33,6 +35,7 @@ export function CalendarPage() {
     api.profile().then((p) => {
       if (p.settings) {
         setIl(p.settings.il);
+        if (p.settings.tzid) setTzid(p.settings.tzid);
         if (p.settings.latitude != null && p.settings.longitude != null) {
           setGeo({ lat: p.settings.latitude, lon: p.settings.longitude, tzid: p.settings.tzid });
         }
@@ -50,7 +53,9 @@ export function CalendarPage() {
   const eventsByDate = useMemo(() => {
     const map = new Map<string, EventInstance[]>();
     for (const e of events) {
-      const d = e.start.slice(0, 10);
+      // localDate is resolved server-side in the user's timezone; slicing the
+      // UTC instant here would file evening events under the previous day.
+      const d = e.localDate;
       const arr = map.get(d) ?? [];
       arr.push(e);
       map.set(d, arr);
@@ -196,10 +201,10 @@ export function CalendarPage() {
       )}
 
       {modalDate && calendarId && (
-        <EventModal calendarId={calendarId} dateIso={modalDate} onClose={() => setModalDate(null)} onSaved={refresh} />
+        <EventModal calendarId={calendarId} dateIso={modalDate} tzid={tzid} onClose={() => setModalDate(null)} onSaved={refresh} />
       )}
       {editing && calendarId && (
-        <EventModal calendarId={calendarId} event={editing} onClose={() => setEditing(null)} onSaved={refresh} />
+        <EventModal calendarId={calendarId} event={editing} tzid={tzid} onClose={() => setEditing(null)} onSaved={refresh} />
       )}
     </div>
   );

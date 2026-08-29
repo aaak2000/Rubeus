@@ -56,6 +56,21 @@ export class ZmanimService {
   }
 
   /**
+   * The sunset instant for a Gregorian date at a location, or null when it
+   * cannot be computed (polar day/night). Used to determine the Hebrew day
+   * boundary, which falls at sunset rather than midnight.
+   */
+  sunsetInstant(iso: string, location: GeoPoint, useElevation = false): Date | null {
+    try {
+      const zmanim = new Zmanim(toGeoLocation(location), fromIsoDate(iso), useElevation);
+      const d = zmanim.sunset();
+      return isValidDate(d) ? d : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Candle-lighting time (default 18 minutes before sunset) for the given day.
    * Returns HH:MM or null.
    */

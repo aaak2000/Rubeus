@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { zonedDateKey, zonedDateTimeToUtc, zonedTimeKey } from '@hcal/core';
 import { api, ApiError, type EventInstance } from '../api/client';
 
 interface Props {
@@ -7,18 +8,20 @@ interface Props {
   dateIso?: string;
   /** Edit mode: the event being edited. */
   event?: EventInstance;
+  /** The user's timezone — the context in which entered times are read. */
+  tzid: string;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export function EventModal({ calendarId, dateIso, event, onClose, onSaved }: Props) {
+export function EventModal({ calendarId, dateIso, event, tzid, onClose, onSaved }: Props) {
   const isEdit = Boolean(event);
-  const baseDate = event ? event.start.slice(0, 10) : (dateIso ?? new Date().toISOString().slice(0, 10));
+  const baseDate = event ? zonedDateKey(new Date(event.start), tzid) : (dateIso ?? zonedDateKey(new Date(), tzid));
 
   const [title, setTitle] = useState(event?.title ?? '');
   const [allDay, setAllDay] = useState(event?.allDay ?? true);
-  const [startTime, setStartTime] = useState(event ? event.start.slice(11, 16) : '09:00');
-  const [endTime, setEndTime] = useState(event ? event.end.slice(11, 16) : '10:00');
+  const [startTime, setStartTime] = useState(event ? zonedTimeKey(new Date(event.start), tzid) : '09:00');
+  const [endTime, setEndTime] = useState(event ? zonedTimeKey(new Date(event.end), tzid) : '10:00');
   const [location, setLocation] = useState(event?.location ?? '');
   const [hebrewRecurrence, setHebrewRecurrence] = useState(event?.hebrewRecurrence ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +32,12 @@ export function EventModal({ calendarId, dateIso, event, onClose, onSaved }: Pro
     setBusy(true);
     setError(null);
     try {
-      const start = allDay ? `${baseDate}T00:00:00Z` : `${baseDate}T${startTime}:00Z`;
-      const end = allDay ? `${baseDate}T23:59:59Z` : `${baseDate}T${endTime}:00Z`;
+      // Entered times are wall-clock in the user's timezone; convert to UTC
+      // instants so 09:00 in Jerusalem is stored as 06:00Z, not 09:00Z.
+      const start = zonedDateTimeToUtc(baseDate, allDay ? '00:00' : startTime, tzid).toISOString();
+      const end = allDay
+        ? new Date(zonedDateTimeToUtc(baseDate, '00:00', tzid).getTime() + 24 * 3600_000 - 1000).toISOString()
+        : zonedDateTimeToUtc(baseDate, endTime, tzid).toISOString();
       const body: Record<string, unknown> = { title, start, end, allDay, location: location || undefined };
       if (hebrewRecurrence) {
         body.hebrewRecurrence = hebrewRecurrence;

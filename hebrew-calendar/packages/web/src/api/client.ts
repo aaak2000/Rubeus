@@ -101,6 +101,8 @@ export interface EventInstance {
   end: string;
   allDay: boolean;
   isOccurrence: boolean;
+  /** Calendar day in the user's timezone (YYYY-MM-DD), resolved server-side. */
+  localDate: string;
   hebrewRecurrence: string | null;
   hebrew: { text: string; monthName: string; day: number; year: number };
 }
