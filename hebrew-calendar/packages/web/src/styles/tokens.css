@@ -1,0 +1,200 @@
+/*
+ * Design tokens.
+ *
+ * A quiet, precise system: near-neutral surfaces, one restrained interactive
+ * colour, and hue reserved for meaning (holiday, Shabbat, recurrence). Every
+ * foreground/background pair used for text meets WCAG 2.1 AA (>= 4.5:1;
+ * >= 3:1 for large text and UI boundaries) in both themes.
+ *
+ * Themes: `:root` is light. Dark applies when the user's system prefers it,
+ * unless an explicit `data-theme` overrides — so the toggle wins either way.
+ */
+
+:root {
+  /* --- surfaces --- */
+  --canvas: #f7f8fa;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f1f3f6;
+  --surface-hover: #f1f3f6;
+
+  /* --- ink --- */
+  --ink: #14161a;          /* 15.9:1 on surface */
+  --ink-muted: #5a6472;    /*  5.4:1 on surface */
+  --ink-subtle: #6b7480;   /*  4.6:1 on surface */
+  --ink-on-accent: #ffffff;
+
+  /* --- lines --- */
+  --border: #e2e5ea;
+  --border-strong: #8b93a3;  /* 3.09:1 on surface — WCAG 1.4.11 */
+
+  /* --- interactive --- */
+  --primary: #2b57c4;        /* 6.3:1 on white */
+  --primary-hover: #234aa8;
+  --primary-active: #1d3f8f;
+  --primary-tint: #eaf0fd;
+  --primary-tint-ink: #1e46a4; /* 7.4:1 on the tint */
+
+  /* --- semantic --- */
+  --danger: #b4232c;
+  --danger-hover: #971d25;
+  --danger-tint: #fdecec;
+  --danger-tint-ink: #97202a;
+
+  --success: #1c7a4d;
+  --success-tint: #e6f5ed;
+  --success-tint-ink: #145f3c;
+
+  /* Holidays and festivals — warm, distinct from interactive blue. */
+  --holiday: #8a5300;
+  --holiday-tint: #fdf1dd;
+  --holiday-tint-ink: #7a4900;
+
+  /* Hebrew-date recurrences (yahrzeit, birthdays). */
+  --recurrence-tint: #e8f3f1;
+  --recurrence-tint-ink: #14615a;
+
+  /* Shabbat and festival day columns get a barely-there wash. */
+  --shabbat-wash: #f3f2fb;
+
+  --focus-ring: #2b57c4;
+
+  /* --- shape --- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 999px;
+
+  /* --- elevation --- */
+  --shadow-sm: 0 1px 2px rgba(15, 20, 30, 0.06), 0 1px 1px rgba(15, 20, 30, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 20, 30, 0.08), 0 1px 3px rgba(15, 20, 30, 0.05);
+  --shadow-lg: 0 16px 40px rgba(15, 20, 30, 0.16), 0 4px 12px rgba(15, 20, 30, 0.08);
+
+  /* --- spacing --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* --- typography --- */
+  --font-sans: 'Assistant Variable', 'Assistant', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --leading-tight: 1.25;
+  --leading-normal: 1.55;
+
+  /* --- motion --- */
+  --dur-fast: 110ms;
+  --dur: 170ms;
+  --ease: cubic-bezier(0.2, 0, 0.13, 1);
+
+  color-scheme: light;
+}
+
+/* Dark theme: applied by system preference unless light is pinned. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --canvas: #0c0e12;
+    --surface: #14171d;
+    --surface-raised: #191d24;
+    --surface-sunken: #101318;
+    --surface-hover: #1e232b;
+
+    --ink: #e9ecf1;         /* 14.4:1 on surface */
+    --ink-muted: #9aa3b2;   /*  6.4:1 on surface */
+    --ink-subtle: #848d9c;  /*  4.9:1 on surface */
+    --ink-on-accent: #0c0e12;
+
+    --border: #262c36;
+    --border-strong: #5d687a;  /* 3.18:1 on surface */
+
+    --primary: #8fb0ff;       /* 8.6:1 on surface */
+    --primary-hover: #a6c0ff;
+    --primary-active: #b8ceff;
+    --primary-tint: #182338;
+    --primary-tint-ink: #a9c4ff;
+
+    --danger: #ff9b9b;
+    --danger-hover: #ffb3b3;
+    --danger-tint: #33191b;
+    --danger-tint-ink: #ffaeae;
+
+    --success: #6ede9f;
+    --success-tint: #12251c;
+    --success-tint-ink: #7fe3ac;
+
+    --holiday: #f0c274;
+    --holiday-tint: #2b2213;
+    --holiday-tint-ink: #f2c983;
+
+    --recurrence-tint: #10262a;
+    --recurrence-tint-ink: #79d6cb;
+
+    --shabbat-wash: #171a26;
+
+    --focus-ring: #8fb0ff;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.55);
+    --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.65);
+
+    color-scheme: dark;
+  }
+}
+
+/* Explicit choice always wins over the system preference. */
+:root[data-theme='dark'] {
+  --canvas: #0c0e12;
+  --surface: #14171d;
+  --surface-raised: #191d24;
+  --surface-sunken: #101318;
+  --surface-hover: #1e232b;
+
+  --ink: #e9ecf1;
+  --ink-muted: #9aa3b2;
+  --ink-subtle: #848d9c;
+  --ink-on-accent: #0c0e12;
+
+  --border: #262c36;
+  --border-strong: #5d687a;  /* 3.18:1 on surface */
+
+  --primary: #8fb0ff;
+  --primary-hover: #a6c0ff;
+  --primary-active: #b8ceff;
+  --primary-tint: #182338;
+  --primary-tint-ink: #a9c4ff;
+
+  --danger: #ff9b9b;
+  --danger-hover: #ffb3b3;
+  --danger-tint: #33191b;
+  --danger-tint-ink: #ffaeae;
+
+  --success: #6ede9f;
+  --success-tint: #12251c;
+  --success-tint-ink: #7fe3ac;
+
+  --holiday: #f0c274;
+  --holiday-tint: #2b2213;
+  --holiday-tint-ink: #f2c983;
+
+  --recurrence-tint: #10262a;
+  --recurrence-tint-ink: #79d6cb;
+
+  --shabbat-wash: #171a26;
+
+  --focus-ring: #8fb0ff;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.65);
+
+  color-scheme: dark;
+}
