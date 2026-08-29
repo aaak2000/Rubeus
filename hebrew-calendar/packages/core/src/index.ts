@@ -13,6 +13,7 @@ export { ZmanimService, zmanimService } from './ZmanimService.js';
 export type { DailyZmanim, ZmanKey } from './ZmanimService.js';
 export { HebrewRecurrence, hebrewRecurrence } from './HebrewRecurrence.js';
 export type { HebrewRecurrenceSpec } from './HebrewRecurrence.js';
+export { GregorianRecurrence, gregorianRecurrence } from './GregorianRecurrence.js';
 
 // Re-export commonly used hebcal primitives for downstream packages.
 export { HDate, months, gematriya } from '@hebcal/core';

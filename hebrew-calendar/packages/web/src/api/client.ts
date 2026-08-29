@@ -75,6 +75,15 @@ export interface AuthResponse {
   refreshToken: string;
   user: { id: string; email: string; displayName: string | null };
 }
+export interface SyncResult {
+  pulledCreated: number;
+  pulledUpdated: number;
+  pulledDeleted: number;
+  pushedCreated: number;
+  pushedUpdated: number;
+  pushedDeleted: number;
+  conflicts: number;
+}
 export interface Calendar {
   id: string;
   name: string;
@@ -135,6 +144,8 @@ export const api = {
     raw<EventInstance[]>(`/calendars/${calendarId}/events?start=${start}&end=${end}`, { method: 'GET' }),
   createEvent: (calendarId: string, body: Record<string, unknown>) =>
     raw<EventInstance>(`/calendars/${calendarId}/events`, { method: 'POST', body: JSON.stringify(body) }),
+  updateEvent: (calendarId: string, id: string, body: Record<string, unknown>) =>
+    raw<EventInstance>(`/calendars/${calendarId}/events/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteEvent: (calendarId: string, id: string) =>
     raw(`/calendars/${calendarId}/events/${id}`, { method: 'DELETE' }),
 
@@ -148,7 +159,7 @@ export const api = {
 
   googleUrl: () => raw<{ url: string }>('/oauth/google/url', { method: 'GET' }),
   microsoftUrl: () => raw<{ url: string }>('/oauth/microsoft/url', { method: 'GET' }),
-  sync: (calendarId: string) => raw(`/calendars/${calendarId}/sync`, { method: 'POST' }),
+  sync: (calendarId: string) => raw<SyncResult>(`/calendars/${calendarId}/sync`, { method: 'POST' }),
   importIcs: (calendarId: string, ics: string) =>
     raw<{ imported: number }>(`/calendars/${calendarId}/import.ics`, { method: 'POST', body: JSON.stringify({ ics }) }),
 };

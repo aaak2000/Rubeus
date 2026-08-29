@@ -1,20 +1,26 @@
 import { useState, type FormEvent } from 'react';
-import { api, ApiError } from '../api/client';
+import { api, ApiError, type EventInstance } from '../api/client';
 
 interface Props {
   calendarId: string;
-  dateIso: string;
+  /** Create mode: the clicked day (YYYY-MM-DD). */
+  dateIso?: string;
+  /** Edit mode: the event being edited. */
+  event?: EventInstance;
   onClose: () => void;
-  onCreated: () => void;
+  onSaved: () => void;
 }
 
-export function EventModal({ calendarId, dateIso, onClose, onCreated }: Props) {
-  const [title, setTitle] = useState('');
-  const [allDay, setAllDay] = useState(true);
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('10:00');
-  const [location, setLocation] = useState('');
-  const [hebrewRecurrence, setHebrewRecurrence] = useState('');
+export function EventModal({ calendarId, dateIso, event, onClose, onSaved }: Props) {
+  const isEdit = Boolean(event);
+  const baseDate = event ? event.start.slice(0, 10) : (dateIso ?? new Date().toISOString().slice(0, 10));
+
+  const [title, setTitle] = useState(event?.title ?? '');
+  const [allDay, setAllDay] = useState(event?.allDay ?? true);
+  const [startTime, setStartTime] = useState(event ? event.start.slice(11, 16) : '09:00');
+  const [endTime, setEndTime] = useState(event ? event.end.slice(11, 16) : '10:00');
+  const [location, setLocation] = useState(event?.location ?? '');
+  const [hebrewRecurrence, setHebrewRecurrence] = useState(event?.hebrewRecurrence ?? '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -23,17 +29,33 @@ export function EventModal({ calendarId, dateIso, onClose, onCreated }: Props) {
     setBusy(true);
     setError(null);
     try {
-      const start = allDay ? `${dateIso}T00:00:00Z` : `${dateIso}T${startTime}:00Z`;
-      const end = allDay ? `${dateIso}T23:59:59Z` : `${dateIso}T${endTime}:00Z`;
+      const start = allDay ? `${baseDate}T00:00:00Z` : `${baseDate}T${startTime}:00Z`;
+      const end = allDay ? `${baseDate}T23:59:59Z` : `${baseDate}T${endTime}:00Z`;
       const body: Record<string, unknown> = { title, start, end, allDay, location: location || undefined };
       if (hebrewRecurrence) {
         body.hebrewRecurrence = hebrewRecurrence;
-        body.hebrewRecurrenceDate = dateIso;
+        body.hebrewRecurrenceDate = baseDate;
       }
-      await api.createEvent(calendarId, body);
-      onCreated();
+      if (isEdit && event) await api.updateEvent(calendarId, event.id, body);
+      else await api.createEvent(calendarId, body);
+      onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'שגיאה ביצירת האירוע');
+      setError(err instanceof ApiError ? err.message : 'שגיאה בשמירת האירוע');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    if (!event) return;
+    if (!confirm('למחוק את האירוע? הפעולה תמחק את כל הסדרה.')) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.deleteEvent(calendarId, event.id);
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'שגיאה במחיקת האירוע');
     } finally {
       setBusy(false);
     }
@@ -42,7 +64,10 @@ export function EventModal({ calendarId, dateIso, onClose, onCreated }: Props) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <form className="card modal" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
-        <h2>אירוע חדש — {dateIso}</h2>
+        <h2>{isEdit ? 'עריכת אירוע' : 'אירוע חדש'} — {baseDate}</h2>
+        {event?.isOccurrence && (
+          <div className="muted small">שינוי או מחיקה משפיעים על כל הסדרה החוזרת.</div>
+        )}
         <label>
           כותרת
           <input required value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
@@ -78,6 +103,12 @@ export function EventModal({ calendarId, dateIso, onClose, onCreated }: Props) {
         </label>
         {error && <div className="error">{error}</div>}
         <div className="actions">
+          {isEdit && (
+            <button type="button" className="danger" onClick={remove} disabled={busy}>
+              מחיקה
+            </button>
+          )}
+          <div className="spacer" />
           <button type="button" className="link-btn" onClick={onClose}>
             ביטול
           </button>

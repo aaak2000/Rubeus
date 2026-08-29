@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, icsExportUrl, type Calendar, type Profile } from '../api/client';
+import { api, ApiError, icsExportUrl, type Calendar, type Profile, type SyncResult } from '../api/client';
 
 export function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -10,6 +10,8 @@ export function SettingsPage() {
   const [il, setIl] = useState(false);
   const [saved, setSaved] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
+  const [syncBusy, setSyncBusy] = useState<string | null>(null);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   useEffect(() => {
     api.profile().then((p) => {
@@ -43,6 +45,21 @@ export function SettingsPage() {
     });
   }
 
+  async function syncCalendar(id: string) {
+    setSyncBusy(id);
+    setSyncMsg(null);
+    try {
+      const r: SyncResult = await api.sync(id);
+      const pulled = r.pulledCreated + r.pulledUpdated + r.pulledDeleted;
+      const pushed = r.pushedCreated + r.pushedUpdated + r.pushedDeleted;
+      setSyncMsg(`הסנכרון הושלם — נמשכו ${pulled}, נדחפו ${pushed}` + (r.conflicts ? `, ${r.conflicts} התנגשויות` : ''));
+    } catch (err) {
+      setSyncMsg(err instanceof ApiError ? err.message : 'שגיאה בסנכרון');
+    } finally {
+      setSyncBusy(null);
+    }
+  }
+
   async function connectGoogle() {
     const { url } = await api.googleUrl();
     window.location.href = url;
@@ -61,6 +78,7 @@ export function SettingsPage() {
   }
 
   const defaultCal = calendars.find((c) => c.isDefault) ?? calendars[0];
+  const linkedCalendars = calendars.filter((c) => c.connectionId);
 
   return (
     <div className="settings-page">
@@ -117,8 +135,25 @@ export function SettingsPage() {
             חיבור Microsoft/Outlook
           </button>
         </div>
+        {linkedCalendars.length > 0 && (
+          <div className="linked-cals">
+            <h3>יומנים מקושרים</h3>
+            <ul>
+              {linkedCalendars.map((c) => (
+                <li key={c.id}>
+                  <span className="dot" style={{ background: c.color ?? '#64748b' }} />
+                  <span className="name">{c.name}</span>
+                  <button className="link-btn" disabled={syncBusy === c.id} onClick={() => syncCalendar(c.id)}>
+                    {syncBusy === c.id ? 'מסנכרן…' : 'סנכרן עכשיו'}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {syncMsg && <div className="ok small">{syncMsg}</div>}
+          </div>
+        )}
         <p className="muted small">
-          לאחר החיבור, נוצר יומן ממופה. סנכרון דו-כיווני מופעל מכפתור הסנכרון בכל יומן.
+          לאחר חיבור חשבון נוצר יומן ממופה. לחצו "סנכרן עכשיו" כדי לבצע סנכרון דו-כיווני.
         </p>
       </section>
 

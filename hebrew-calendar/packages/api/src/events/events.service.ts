@@ -1,6 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { Event as DbEvent } from '@prisma/client';
-import { hebrewDateService, hebrewRecurrence, type HebrewRecurrenceSpec } from '@hcal/core';
+import {
+  gregorianRecurrence,
+  hebrewDateService,
+  hebrewRecurrence,
+  type HebrewRecurrenceSpec,
+} from '@hcal/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { CalendarsService } from '../calendars/calendars.service';
 import type { CreateEventDto, UpdateEventDto } from './dto';
@@ -121,8 +126,19 @@ export class EventsService {
           const dayEnd = `${occ.gregorian}T23:59:59.000Z`;
           out.push(this.toInstance(e, { start: dayStart, end: dayEnd, allDay: true, isOccurrence: true }));
         }
+      } else if (e.rrule) {
+        // Standard iCalendar recurrence: expand into concrete occurrences,
+        // preserving each occurrence's duration.
+        const durationMs = e.endUtc.getTime() - e.startUtc.getTime();
+        const starts = gregorianRecurrence.occurrencesBetween(e.rrule, e.startUtc, startIso.slice(0, 10), endIso.slice(0, 10));
+        for (const occStart of starts) {
+          const occEnd = new Date(occStart.getTime() + durationMs);
+          out.push(
+            this.toInstance(e, { start: occStart.toISOString(), end: occEnd.toISOString(), isOccurrence: true }),
+          );
+        }
       } else {
-        // Overlap test (base event; a Gregorian RRULE is passed through as-is).
+        // Single event: include if it overlaps the queried window.
         if (e.startUtc <= end && e.endUtc >= start) out.push(this.toInstance(e));
       }
     }

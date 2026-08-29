@@ -19,6 +19,8 @@ export function CalendarPage() {
   const [modalDate, setModalDate] = useState<string | null>(null);
   const [geo, setGeo] = useState<{ lat: number; lon: number; tzid: string } | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [editing, setEditing] = useState<EventInstance | null>(null);
 
   const grid = useMemo<GridDay[]>(() => buildMonthGrid(year, month, il), [year, month, il]);
 
@@ -71,10 +73,26 @@ export function CalendarPage() {
 
   function refresh() {
     setModalDate(null);
+    setEditing(null);
     if (!calendarId) return;
     const start = `${grid[0]!.iso}T00:00:00Z`;
     const end = `${grid[grid.length - 1]!.iso}T23:59:59Z`;
     api.events(calendarId, start, end).then(setEvents);
+  }
+
+  const selectedCalendar = calendars.find((c) => c.id === calendarId);
+
+  async function syncNow() {
+    if (!calendarId) return;
+    setSyncing(true);
+    try {
+      await api.sync(calendarId);
+      refresh();
+    } catch {
+      /* surfaced via Settings; keep the calendar view quiet */
+    } finally {
+      setSyncing(false);
+    }
   }
 
   const zmanim = useMemo(() => {
@@ -105,6 +123,11 @@ export function CalendarPage() {
           <label className="row">
             <input type="checkbox" checked={il} onChange={(e) => setIl(e.target.checked)} /> לוח א״י
           </label>
+          {selectedCalendar?.connectionId && (
+            <button className="link-btn" disabled={syncing} onClick={syncNow}>
+              {syncing ? 'מסנכרן…' : '⟳ סנכרן'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -136,7 +159,12 @@ export function CalendarPage() {
                 </div>
               ))}
               {evs.map((e) => (
-                <div key={e.id + e.start} className={`chip event${e.isOccurrence ? ' occ' : ''}`} title={e.title}>
+                <div
+                  key={e.id + e.start}
+                  className={`chip event${e.isOccurrence ? ' occ' : ''}`}
+                  title={e.title}
+                  onClick={(ev) => { ev.stopPropagation(); setEditing(e); }}
+                >
                   {e.isOccurrence ? '🕯️ ' : ''}
                   {e.title}
                 </div>
@@ -168,7 +196,10 @@ export function CalendarPage() {
       )}
 
       {modalDate && calendarId && (
-        <EventModal calendarId={calendarId} dateIso={modalDate} onClose={() => setModalDate(null)} onCreated={refresh} />
+        <EventModal calendarId={calendarId} dateIso={modalDate} onClose={() => setModalDate(null)} onSaved={refresh} />
+      )}
+      {editing && calendarId && (
+        <EventModal calendarId={calendarId} event={editing} onClose={() => setEditing(null)} onSaved={refresh} />
       )}
     </div>
   );
