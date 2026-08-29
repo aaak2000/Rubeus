@@ -1,11 +1,25 @@
 import { Body, Controller, Get, Post, Query, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { IsString, IsUrl, MinLength } from 'class-validator';
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthUser } from '../auth/dto';
 import { OAuthService } from './oauth.service';
+
+class ConnectCaldavDto {
+  @IsUrl({ require_tld: false })
+  url!: string;
+
+  @IsString()
+  @MinLength(1)
+  username!: string;
+
+  @IsString()
+  @MinLength(1)
+  password!: string;
+}
 
 @ApiTags('oauth')
 @Controller('oauth')
@@ -45,10 +59,7 @@ export class OAuthController {
   @Post('caldav/connect')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  connectCaldav(
-    @CurrentUser() user: AuthUser,
-    @Body() dto: { url: string; username: string; password: string },
-  ) {
+  connectCaldav(@CurrentUser() user: AuthUser, @Body() dto: ConnectCaldavDto) {
     return this.oauth.connectCaldav(user.userId, dto);
   }
 

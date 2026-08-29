@@ -1,5 +1,5 @@
 import type { CalendarProvider, CanonicalEvent, ChangeSet, ProviderRef } from '../types.js';
-import { apiFetch, type TokenSource } from './support.js';
+import { apiFetch, isExpiredCursor, type TokenSource } from './support.js';
 
 const BASE = 'https://www.googleapis.com/calendar/v3';
 
@@ -75,7 +75,25 @@ export class GoogleAdapter implements CalendarProvider {
     return `${BASE}/calendars/${encodeURIComponent(this.calendarId)}/events${suffix}`;
   }
 
+  /**
+   * Pull changes since `sinceToken`.
+   *
+   * Google expires sync tokens (after a retention window, or when the calendar
+   * changes in ways it cannot express incrementally) and answers 410 Gone. The
+   * documented recovery is to discard the token and resync in full, which is
+   * done transparently here — otherwise the calendar would stay broken forever.
+   */
   async listChanges(sinceToken?: string): Promise<ChangeSet> {
+    if (!sinceToken) return this.fetchChanges(undefined);
+    try {
+      return await this.fetchChanges(sinceToken);
+    } catch (err) {
+      if (!isExpiredCursor(err)) throw err;
+      return this.fetchChanges(undefined);
+    }
+  }
+
+  private async fetchChanges(sinceToken: string | undefined): Promise<ChangeSet> {
     const token = await this.tokens.getAccessToken();
     const changes: ChangeSet['changes'] = [];
     let pageToken: string | undefined;

@@ -30,6 +30,25 @@ model User {
   settings     UserSettings?
   calendars    Calendar[]
   connections  ProviderConnection[]
+  refreshTokens RefreshToken[]
+}
+
+/// A issued refresh token, stored only as a hash so a database read cannot
+/// mint sessions. Rotated on every use and revocable on sign-out.
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 of the token; the token itself is never persisted.
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  /// Set when this token was rotated, pointing at its replacement.
+  replacedById String?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 /// Per-user preferences, including the location used for zmanim.
