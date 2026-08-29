@@ -14,8 +14,11 @@ class RefreshDto {
 }
 
 // Credential endpoints are the prime target for brute force: allow far fewer
-// attempts per minute than the global default.
-@Throttle({ default: { ttl: 60_000, limit: 10 } })
+// attempts per minute than the global default. Configurable so automated
+// suites, which register many accounts in quick succession, can raise it.
+const AUTH_ATTEMPTS_PER_MINUTE = Number(process.env.AUTH_RATE_LIMIT ?? 10);
+
+@Throttle({ default: { ttl: 60_000, limit: AUTH_ATTEMPTS_PER_MINUTE } })
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {

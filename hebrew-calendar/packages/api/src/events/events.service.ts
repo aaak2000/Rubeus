@@ -139,11 +139,14 @@ export class EventsService {
     }
 
     const tzid = await this.timezoneOf(userId);
-    // Widen the scan by a day on each side so an occurrence whose local day
-    // falls inside the window is not dropped for its UTC instant sitting just
-    // outside it.
-    const scanFrom = zonedDateKey(new Date(start.getTime() - DAY_MS), tzid);
-    const scanTo = zonedDateKey(new Date(end.getTime() + DAY_MS), tzid);
+    // Widen the scan by a day on each side so an event whose local day falls
+    // inside the window is not dropped because its UTC instant sits just
+    // outside it — a 01:30 Jerusalem event is 22:30Z on the previous date.
+    // The localDate filter below trims the surplus back off.
+    const scanStart = new Date(start.getTime() - DAY_MS);
+    const scanEnd = new Date(end.getTime() + DAY_MS);
+    const scanFrom = zonedDateKey(scanStart, tzid);
+    const scanTo = zonedDateKey(scanEnd, tzid);
 
     const events = await this.prisma.event.findMany({ where: { calendarId } });
     const out: EventInstance[] = [];
@@ -179,7 +182,7 @@ export class EventsService {
             }),
           );
         }
-      } else if (e.startUtc <= end && e.endUtc >= start) {
+      } else if (e.startUtc <= scanEnd && e.endUtc >= scanStart) {
         out.push(this.toInstance(e, tzid));
       }
     }
