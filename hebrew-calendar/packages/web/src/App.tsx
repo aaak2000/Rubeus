@@ -3,36 +3,54 @@ import { useAuth } from './auth/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { AccessibilityPage } from './pages/AccessibilityPage';
+import { Button, Skeleton, ThemeToggle } from './ui';
 
 function Shell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const loc = useLocation();
+  const nav = [
+    { to: '/', label: 'יומן' },
+    { to: '/settings', label: 'הגדרות' },
+  ];
   return (
-    <div className="app">
+    <div className="app-shell">
+      <a className="skip-link" href="#main">
+        דילוג לתוכן הראשי
+      </a>
       <header className="topbar">
-        <div className="brand">📅 יומן עברי</div>
-        <nav>
-          <Link className={loc.pathname === '/' ? 'active' : ''} to="/">
-            יומן
-          </Link>
-          <Link className={loc.pathname === '/settings' ? 'active' : ''} to="/settings">
-            הגדרות
-          </Link>
+        <span className="brand">
+          <span aria-hidden="true">🕯️</span> יומן עברי
+        </span>
+        <nav aria-label="ניווט ראשי">
+          {nav.map((n) => (
+            <Link key={n.to} to={n.to} aria-current={loc.pathname === n.to ? 'page' : undefined}>
+              {n.label}
+            </Link>
+          ))}
         </nav>
-        <div className="spacer" />
-        <span className="user">{user?.displayName ?? user?.email}</span>
-        <button className="link-btn" onClick={logout}>
+        <span className="spacer" />
+        <ThemeToggle />
+        <span className="topbar-user muted text-sm">{user?.displayName ?? user?.email}</span>
+        <Button variant="ghost" size="sm" onClick={logout}>
           יציאה
-        </button>
+        </Button>
       </header>
-      <main>{children}</main>
+      <main id="main">{children}</main>
     </div>
   );
 }
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="center">טוען…</div>;
+  if (loading) {
+    return (
+      <div className="boot-loading" aria-busy="true" aria-label="טוען">
+        <Skeleton height={44} />
+        <Skeleton height={320} />
+      </div>
+    );
+  }
   if (!user) return <Navigate to="/login" replace />;
   return <Shell>{children}</Shell>;
 }
@@ -42,6 +60,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
+      <Route path="/accessibility" element={<AccessibilityPage />} />
       <Route
         path="/"
         element={

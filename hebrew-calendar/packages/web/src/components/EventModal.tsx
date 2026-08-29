@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { zonedDateKey, zonedDateTimeToUtc, zonedTimeKey } from '@hcal/core';
 import { api, ApiError, type EventInstance } from '../api/client';
+import { Button, ConfirmDialog, Modal, Switch, useToast } from '../ui';
+import { hebrewDayText, hebrewMonthName } from '../hebrew';
+import { hebrewDateService } from '@hcal/core';
 
 interface Props {
   calendarId: string;
@@ -14,7 +17,15 @@ interface Props {
   onSaved: () => void;
 }
 
+const RECURRENCE_OPTIONS = [
+  { value: '', label: 'ללא חזרה' },
+  { value: 'yahrzeit', label: 'יארצייט (לפי התאריך העברי)' },
+  { value: 'birthday', label: 'יום הולדת עברי' },
+  { value: 'anniversary', label: 'יום נישואין עברי' },
+];
+
 export function EventModal({ calendarId, dateIso, event, tzid, onClose, onSaved }: Props) {
+  const toast = useToast();
   const isEdit = Boolean(event);
   const baseDate = event ? zonedDateKey(new Date(event.start), tzid) : (dateIso ?? zonedDateKey(new Date(), tzid));
 
@@ -26,9 +37,17 @@ export function EventModal({ calendarId, dateIso, event, tzid, onClose, onSaved 
   const [hebrewRecurrence, setHebrewRecurrence] = useState(event?.hebrewRecurrence ?? '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const hebrew = hebrewDateService.fromGregorian(baseDate).hebrew;
+  const hebrewLabel = `${hebrewDayText(hebrew.day)} ב${hebrewMonthName(hebrew.month, hebrew.year)}`;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (!allDay && endTime <= startTime) {
+      setError('שעת הסיום חייבת להיות אחרי שעת ההתחלה');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -38,16 +57,19 @@ export function EventModal({ calendarId, dateIso, event, tzid, onClose, onSaved 
       const end = allDay
         ? new Date(zonedDateTimeToUtc(baseDate, '00:00', tzid).getTime() + 24 * 3600_000 - 1000).toISOString()
         : zonedDateTimeToUtc(baseDate, endTime, tzid).toISOString();
-      const body: Record<string, unknown> = { title, start, end, allDay, location: location || undefined };
+
+      const body: Record<string, unknown> = { title, start, end, allDay };
+      if (location) body.location = location;
       if (hebrewRecurrence) {
         body.hebrewRecurrence = hebrewRecurrence;
         body.hebrewRecurrenceDate = baseDate;
       }
       if (isEdit && event) await api.updateEvent(calendarId, event.id, body);
       else await api.createEvent(calendarId, body);
+      toast.success(isEdit ? 'האירוע עודכן' : 'האירוע נוצר');
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'שגיאה בשמירת האירוע');
+      setError(err instanceof ApiError ? err.message : 'שמירת האירוע נכשלה');
     } finally {
       setBusy(false);
     }
@@ -55,75 +77,106 @@ export function EventModal({ calendarId, dateIso, event, tzid, onClose, onSaved 
 
   async function remove() {
     if (!event) return;
-    if (!confirm('למחוק את האירוע? הפעולה תמחק את כל הסדרה.')) return;
     setBusy(true);
-    setError(null);
     try {
       await api.deleteEvent(calendarId, event.id);
+      toast.success('האירוע נמחק');
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'שגיאה במחיקת האירוע');
+      setError(err instanceof ApiError ? err.message : 'מחיקת האירוע נכשלה');
+      setConfirmingDelete(false);
     } finally {
       setBusy(false);
     }
   }
 
+  if (confirmingDelete && event) {
+    return (
+      <ConfirmDialog
+        title="מחיקת אירוע"
+        message={
+          event.isOccurrence
+            ? 'האירוע חוזר. המחיקה תסיר את כל הסדרה, לא רק את המופע הזה.'
+            : `למחוק את "${event.title}"? לא ניתן לבטל את הפעולה.`
+        }
+        confirmLabel="מחיקה"
+        destructive
+        busy={busy}
+        onConfirm={remove}
+        onCancel={() => setConfirmingDelete(false)}
+      />
+    );
+  }
+
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <form className="card modal" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
-        <h2>{isEdit ? 'עריכת אירוע' : 'אירוע חדש'} — {baseDate}</h2>
+    <Modal
+      title={isEdit ? 'עריכת אירוע' : 'אירוע חדש'}
+      description={`${hebrewLabel} · ${baseDate}`}
+      onClose={onClose}
+      footer={
+        <>
+          {isEdit && (
+            <Button variant="danger" onClick={() => setConfirmingDelete(true)} disabled={busy}>
+              מחיקה
+            </Button>
+          )}
+          <span className="spacer" />
+          <Button variant="ghost" onClick={onClose}>
+            ביטול
+          </Button>
+          <Button variant="primary" type="submit" form="event-form" loading={busy}>
+            שמירה
+          </Button>
+        </>
+      }
+    >
+      <form id="event-form" onSubmit={submit} className="stack">
         {event?.isOccurrence && (
-          <div className="muted small">שינוי או מחיקה משפיעים על כל הסדרה החוזרת.</div>
+          <p className="notice">שינוי או מחיקה משפיעים על כל הסדרה החוזרת.</p>
         )}
-        <label>
-          כותרת
+
+        <label className="field">
+          <span className="field-label">כותרת</span>
           <input required value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
         </label>
-        <label className="row">
-          <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
-          כל היום
-        </label>
+
+        <Switch checked={allDay} onChange={setAllDay} label="אירוע של יום שלם" />
+
         {!allDay && (
           <div className="grid2">
-            <label>
-              התחלה
+            <label className="field">
+              <span className="field-label">שעת התחלה</span>
               <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
             </label>
-            <label>
-              סיום
+            <label className="field">
+              <span className="field-label">שעת סיום</span>
               <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
             </label>
           </div>
         )}
-        <label>
-          מיקום
-          <input value={location} onChange={(e) => setLocation(e.target.value)} />
+
+        <label className="field">
+          <span className="field-label">מיקום</span>
+          <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="לא חובה" />
         </label>
-        <label>
-          חזרה עברית (לפי תאריך עברי)
+
+        <label className="field">
+          <span className="field-label">חזרה שנתית לפי הלוח העברי</span>
           <select value={hebrewRecurrence} onChange={(e) => setHebrewRecurrence(e.target.value)}>
-            <option value="">ללא</option>
-            <option value="yahrzeit">יארצייט</option>
-            <option value="birthday">יום הולדת עברי</option>
-            <option value="anniversary">יום נישואין עברי</option>
+            {RECURRENCE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
         </label>
-        {error && <div className="error">{error}</div>}
-        <div className="actions">
-          {isEdit && (
-            <button type="button" className="danger" onClick={remove} disabled={busy}>
-              מחיקה
-            </button>
-          )}
-          <div className="spacer" />
-          <button type="button" className="link-btn" onClick={onClose}>
-            ביטול
-          </button>
-          <button type="submit" className="primary" disabled={busy}>
-            {busy ? '…' : 'שמירה'}
-          </button>
-        </div>
+
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
       </form>
-    </div>
+    </Modal>
   );
 }

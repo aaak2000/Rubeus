@@ -22,9 +22,17 @@ export function Modal({ title, description, onClose, children, footer }: Props) 
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descId = useId();
+  // Capture the opener during the first render, before any effect moves focus
+  // into the dialog. Reading it inside the effect is wrong under StrictMode:
+  // effects run twice, and by the second run the "previously focused" element
+  // is the dialog's own first field, which is gone once the dialog unmounts.
+  const openerRef = useRef<HTMLElement | null>(null);
+  if (openerRef.current === null) {
+    openerRef.current = document.activeElement as HTMLElement | null;
+  }
 
   useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
+    const opener = openerRef.current;
     const node = ref.current;
     node?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
 
@@ -57,7 +65,16 @@ export function Modal({ title, description, onClose, children, footer }: Props) 
     return () => {
       document.removeEventListener('keydown', onKeyDown, true);
       document.body.style.overflow = previousOverflow;
-      opener?.focus?.();
+      // Restore after the surrounding tree has re-rendered; focusing during
+      // cleanup lands on <body> because the opener is mid-update.
+      //
+      // Only restore on a real unmount. StrictMode re-runs effects in
+      // development while leaving the dialog in the document, and restoring
+      // then would yank focus back out of a dialog that is still open.
+      requestAnimationFrame(() => {
+        if (node?.isConnected) return;
+        if (opener?.isConnected) opener.focus();
+      });
     };
   }, [onClose]);
 

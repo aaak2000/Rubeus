@@ -75,6 +75,11 @@ export interface AuthResponse {
   refreshToken: string;
   user: { id: string; email: string; displayName: string | null };
 }
+export interface SyncItemError {
+  phase: 'pull' | 'push';
+  id?: string;
+  message: string;
+}
 export interface SyncResult {
   pulledCreated: number;
   pulledUpdated: number;
@@ -83,6 +88,8 @@ export interface SyncResult {
   pushedUpdated: number;
   pushedDeleted: number;
   conflicts: number;
+  /** Per-item failures that did not abort the run. */
+  errors: SyncItemError[];
 }
 export interface Calendar {
   id: string;
