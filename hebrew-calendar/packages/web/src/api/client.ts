@@ -122,6 +122,18 @@ export interface CalendarItem {
   emoji?: string;
   time?: string;
 }
+export interface AdConfig {
+  network: { enabled: boolean; provider: 'adsense' | null; clientId: string | null };
+  interstitial: { minNavigations: number; minMinutesBetween: number; maxPerDay: number };
+}
+export interface ServedAd {
+  id: string;
+  advertiser: string;
+  title: string;
+  body: string | null;
+  imageUrl: string | null;
+  targetUrl: string;
+}
 export interface Profile {
   id: string;
   email: string;
@@ -169,6 +181,11 @@ export const api = {
   googleUrl: () => raw<{ url: string }>('/oauth/google/url', { method: 'GET' }),
   microsoftUrl: () => raw<{ url: string }>('/oauth/microsoft/url', { method: 'GET' }),
   sync: (calendarId: string) => raw<SyncResult>(`/calendars/${calendarId}/sync`, { method: 'POST' }),
+  adConfig: () => raw<AdConfig>('/ads/config', { method: 'GET' }),
+  nextAd: (placement: 'interstitial' | 'inline') =>
+    raw<{ ad: ServedAd | null }>(`/ads/next?placement=${placement}`, { method: 'GET' }),
+  adClick: (id: string) => raw<{ targetUrl: string }>(`/ads/${id}/click`, { method: 'POST' }),
+
   importIcs: (calendarId: string, ics: string) =>
     raw<{ imported: number }>(`/calendars/${calendarId}/import.ics`, { method: 'POST', body: JSON.stringify({ ics }) }),
 };

@@ -12,6 +12,7 @@ import { EventsModule } from './events/events.module';
 import { OAuthModule } from './oauth/oauth.module';
 import { SyncModule } from './sync/sync.module';
 import { HealthModule } from './health/health.module';
+import { AdsModule } from './ads/ads.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { HealthModule } from './health/health.module';
     OAuthModule,
     SyncModule,
     HealthModule,
+    AdsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

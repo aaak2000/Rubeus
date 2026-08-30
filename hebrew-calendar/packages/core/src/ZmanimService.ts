@@ -71,6 +71,35 @@ export class ZmanimService {
   }
 
   /**
+   * The candle-lighting instant for a date, or null when it cannot be computed.
+   * Unlike {@link candleLighting} this returns the instant itself, which is what
+   * a comparison against "now" needs.
+   */
+  candleLightingInstant(iso: string, location: GeoPoint, minutesBefore = 18): Date | null {
+    try {
+      const zmanim = new Zmanim(toGeoLocation(location), fromIsoDate(iso), false);
+      const d = zmanim.sunsetOffset(-minutesBefore, true);
+      return isValidDate(d) ? d : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Nightfall (tzeit hakochavim) as an instant — the end of the halachic day,
+   * and so the end of Shabbat or a festival.
+   */
+  nightfallInstant(iso: string, location: GeoPoint): Date | null {
+    try {
+      const zmanim = new Zmanim(toGeoLocation(location), fromIsoDate(iso), false);
+      const d = zmanim.tzeit();
+      return isValidDate(d) ? d : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Candle-lighting time (default 18 minutes before sunset) for the given day.
    * Returns HH:MM or null.
    */

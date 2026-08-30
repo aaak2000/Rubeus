@@ -3,6 +3,7 @@ import { zonedTimeKey, type GeoPoint } from '@hcal/core';
 import type { EventInstance } from '../api/client';
 import { GREGORIAN_MONTHS_HE, HEBREW_WEEKDAYS, ZMAN_LABELS, ZMAN_ORDER, hebrewYearText, zmanimFor, type GridDay } from '../hebrew';
 import { Button, EmptyState } from '../ui';
+import { InlineAd } from '../ads';
 
 interface Props {
   day: GridDay;
@@ -111,6 +112,9 @@ export function DayDrawer({ day, events, geo, tzid, onClose, onCreate, onOpenEve
           />
         )}
       </section>
+
+      {/* Below the day's own content, so it never competes with it. */}
+      <InlineAd />
     </aside>
   );
 }

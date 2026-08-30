@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { isValidTimeZone, localTimeZone } from '@hcal/core';
 import { api, ApiError, icsExportUrl, type Calendar, type Profile } from '../api/client';
 import { Button, EmptyState, Skeleton, Switch, useToast } from '../ui';
+import { useAds } from '../ads';
 
 const PROVIDER_NAMES: Record<string, string> = {
   google: 'Google Calendar',
@@ -12,6 +13,7 @@ const PROVIDER_NAMES: Record<string, string> = {
 
 export function SettingsPage() {
   const toast = useToast();
+  const ads = useAds();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [loading, setLoading] = useState(true);
@@ -231,6 +233,34 @@ export function SettingsPage() {
               />
             </label>
           </div>
+        )}
+      </section>
+
+      <section className="card stack" aria-labelledby="ads-h">
+        <div>
+          <h2 id="ads-h">מודעות</h2>
+          <p className="muted text-sm">
+            המודעות נבחרות מראש ומותאמות לקהל, ואינן מוצגות בשבת ובחג — לפי זמני המיקום שהגדרתם.
+          </p>
+        </div>
+
+        <Switch
+          checked={ads.adsEnabled}
+          onChange={ads.setAdsEnabled}
+          label="הצגת מודעות"
+          hint="כיבוי מסתיר את כל המודעות במכשיר הזה"
+        />
+
+        <Switch
+          checked={ads.consent === 'accepted'}
+          onChange={(v) => ads.setConsent(v ? 'accepted' : 'rejected')}
+          disabled={!ads.adsEnabled}
+          label="התאמה אישית של מודעות"
+          hint="בכיבוי יוצגו מודעות כלליות בלבד, ללא התאמה לפי שימוש"
+        />
+
+        {ads.resting && (
+          <p className="notice">כרגע שבת או חג — המודעות מושבתות.</p>
         )}
       </section>
 

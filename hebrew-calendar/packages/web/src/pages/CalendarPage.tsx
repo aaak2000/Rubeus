@@ -19,6 +19,7 @@ import { AgendaView } from '../views/AgendaView';
 import { HebrewYearView } from '../views/HebrewYearView';
 import type { ViewMode } from '../views/types';
 import { useToast } from '../ui';
+import { useAds } from '../ads';
 
 const AGENDA_DAYS = 45;
 
@@ -28,6 +29,7 @@ function todayIsoIn(tz: string): string {
 
 export function CalendarPage() {
   const toast = useToast();
+  const { setLocation } = useAds();
   const [tzid, setTzid] = useState<string>(localTimeZone());
   const [anchor, setAnchor] = useState<string>(() => todayIsoIn(localTimeZone()));
   const [view, setView] = useState<ViewMode>(() =>
@@ -70,7 +72,10 @@ export function CalendarPage() {
           if (profile.settings.tzid) setTzid(profile.settings.tzid);
           const { latitude, longitude, tzid: t } = profile.settings;
           if (latitude != null && longitude != null) {
-            setGeo({ latitude, longitude, tzid: t, il: profile.settings.il });
+            const point = { latitude, longitude, tzid: t, il: profile.settings.il };
+            setGeo(point);
+            // The Shabbat gate needs the location to know when the day turns.
+            setLocation(point, profile.settings.il);
           }
         }
       })
@@ -78,7 +83,7 @@ export function CalendarPage() {
     return () => {
       cancelled = true;
     };
-  }, [toast]);
+  }, [toast, setLocation]);
 
   const loadEvents = useCallback(async () => {
     if (!calendarId || days.length === 0) return;

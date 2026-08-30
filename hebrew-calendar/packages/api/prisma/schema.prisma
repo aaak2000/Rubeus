@@ -148,3 +148,38 @@ model SyncState {
 
   @@unique([calendarId])
 }
+
+/// Where an ad may be shown. Interstitials carry house inventory only —
+/// Google requires its own tags for interstitial formats, so third-party
+/// network creatives are never wrapped in our dialog.
+enum AdPlacement {
+  interstitial
+  inline
+}
+
+/// A directly-sold advertiser campaign.
+///
+/// This is an allowlist: nothing appears here without being approved, which is
+/// what makes the inventory suitable for the audience. Network fill (AdSense)
+/// is configured separately and never served through the interstitial.
+model AdCampaign {
+  id          String      @id @default(cuid())
+  /// The advertiser's name, shown to users for transparency.
+  advertiser  String
+  title       String
+  body        String?
+  imageUrl    String?
+  targetUrl   String
+  placement   AdPlacement @default(interstitial)
+  /// Relative share of impressions among eligible campaigns.
+  weight      Int         @default(1)
+  active      Boolean     @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  impressions Int         @default(0)
+  clicks      Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([active, placement])
+}

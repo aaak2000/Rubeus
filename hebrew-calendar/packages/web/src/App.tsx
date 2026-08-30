@@ -5,10 +5,15 @@ import { CalendarPage } from './pages/CalendarPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AccessibilityPage } from './pages/AccessibilityPage';
 import { Button, Skeleton, ThemeToggle } from './ui';
+import { ConsentBanner, InterstitialAd, useInterstitial } from './ads';
 
 function Shell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const loc = useLocation();
+  // An ad must never land on top of work in progress, so any open dialog
+  // suppresses it entirely.
+  const dialogOpen = typeof document !== 'undefined' && document.querySelector('[role="dialog"]') !== null;
+  const { ad, dismiss } = useInterstitial(dialogOpen);
   const nav = [
     { to: '/', label: 'יומן' },
     { to: '/settings', label: 'הגדרות' },
@@ -37,6 +42,8 @@ function Shell({ children }: { children: React.ReactNode }) {
         </Button>
       </header>
       <main id="main">{children}</main>
+      <ConsentBanner />
+      {ad && <InterstitialAd ad={ad} onDismiss={dismiss} />}
     </div>
   );
 }
