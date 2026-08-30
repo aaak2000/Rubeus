@@ -1,9 +1,16 @@
-import { useState, type FormEvent } from 'react';
-import { zonedDateKey, zonedDateTimeToUtc, zonedTimeKey } from '@hcal/core';
+import { useMemo, useState, type FormEvent } from 'react';
+import {
+  eveningOf,
+  hebrewDateService,
+  zmanimService,
+  zonedDateKey,
+  zonedDateTimeToUtc,
+  zonedTimeKey,
+  type GeoPoint,
+} from '@hcal/core';
 import { api, ApiError, type EventInstance } from '../api/client';
 import { Button, ConfirmDialog, Modal, Switch, useToast } from '../ui';
 import { hebrewDayText, hebrewMonthName } from '../hebrew';
-import { hebrewDateService } from '@hcal/core';
 
 interface Props {
   calendarId: string;
@@ -13,6 +20,8 @@ interface Props {
   event?: EventInstance;
   /** The user's timezone — the context in which entered times are read. */
   tzid: string;
+  /** Where the user is — needed to know when the Hebrew day turns. */
+  geo?: GeoPoint | null;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -24,10 +33,13 @@ const RECURRENCE_OPTIONS = [
   { value: 'anniversary', label: 'יום נישואין עברי' },
 ];
 
-export function EventModal({ calendarId, dateIso, event, tzid, onClose, onSaved }: Props) {
+export function EventModal({ calendarId, dateIso, event, tzid, geo, onClose, onSaved }: Props) {
   const toast = useToast();
   const isEdit = Boolean(event);
-  const baseDate = event ? zonedDateKey(new Date(event.start), tzid) : (dateIso ?? zonedDateKey(new Date(), tzid));
+  // The day the user picked is a *Hebrew* day — that is what the grid shows.
+  const baseDate = event
+    ? (event.hebrewDay ?? zonedDateKey(new Date(event.start), tzid))
+    : (dateIso ?? zonedDateKey(new Date(), tzid));
 
   const [title, setTitle] = useState(event?.title ?? '');
   const [allDay, setAllDay] = useState(event?.allDay ?? true);
@@ -42,23 +54,46 @@ export function EventModal({ calendarId, dateIso, event, tzid, onClose, onSaved 
   const hebrew = hebrewDateService.fromGregorian(baseDate).hebrew;
   const hebrewLabel = `${hebrewDayText(hebrew.day)} ב${hebrewMonthName(hebrew.month, hebrew.year)}`;
 
+  // The Hebrew day begins at sunset the evening before. A time at or after
+  // that sunset therefore belongs to this Hebrew date but falls on the
+  // *previous* Gregorian one — which is what "ליל" means. Without a location
+  // there is no sunset to place it by, so the civil day is used unchanged.
+  const eveningDate = eveningOf(baseDate);
+  const sunsetLocal = useMemo(() => {
+    if (!geo) return null;
+    const instant = zmanimService.sunsetInstant(eveningDate, geo);
+    return instant ? zonedTimeKey(instant, tzid) : null;
+  }, [geo, eveningDate, tzid]);
+
+  const isEvening = !allDay && sunsetLocal !== null && startTime >= sunsetLocal;
+  // The Gregorian date the instant is actually stored on.
+  const gregorianDate = isEvening ? eveningDate : baseDate;
+  // An end time at or before the start means the event runs past midnight —
+  // ordinary for an evening one, so it lands on the following day.
+  const endsNextDay = !allDay && endTime <= startTime;
+
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!allDay && endTime <= startTime) {
-      setError('שעת הסיום חייבת להיות אחרי שעת ההתחלה');
-      return;
-    }
     setBusy(true);
     setError(null);
     try {
       // Entered times are wall-clock in the user's timezone; convert to UTC
-      // instants so 09:00 in Jerusalem is stored as 06:00Z, not 09:00Z.
-      const start = zonedDateTimeToUtc(baseDate, allDay ? '00:00' : startTime, tzid).toISOString();
-      const end = allDay
-        ? new Date(zonedDateTimeToUtc(baseDate, '00:00', tzid).getTime() + 24 * 3600_000 - 1000).toISOString()
-        : zonedDateTimeToUtc(baseDate, endTime, tzid).toISOString();
+      // instants so 09:00 in Jerusalem is stored as 06:00Z, not 09:00Z. The
+      // date they sit on is `gregorianDate`, which for an evening time is the
+      // day before the Hebrew date the user picked.
+      const startAt = zonedDateTimeToUtc(gregorianDate, allDay ? '00:00' : startTime, tzid);
+      const endAt = allDay
+        ? new Date(zonedDateTimeToUtc(gregorianDate, '00:00', tzid).getTime() + DAY_MS - 1000)
+        : new Date(
+            zonedDateTimeToUtc(gregorianDate, endTime, tzid).getTime() + (endsNextDay ? DAY_MS : 0),
+          );
 
-      const body: Record<string, unknown> = { title, start, end, allDay };
+      const body: Record<string, unknown> = {
+        title,
+        start: startAt.toISOString(),
+        end: endAt.toISOString(),
+        allDay,
+      };
       if (location) body.location = location;
       if (hebrewRecurrence) {
         body.hebrewRecurrence = hebrewRecurrence;
@@ -143,16 +178,35 @@ export function EventModal({ calendarId, dateIso, event, tzid, onClose, onSaved 
         <Switch checked={allDay} onChange={setAllDay} label="אירוע של יום שלם" />
 
         {!allDay && (
-          <div className="grid2">
-            <label className="field">
-              <span className="field-label">שעת התחלה</span>
-              <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-            </label>
-            <label className="field">
-              <span className="field-label">שעת סיום</span>
-              <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-            </label>
-          </div>
+          <>
+            <div className="grid2">
+              <label className="field">
+                <span className="field-label">שעת התחלה</span>
+                <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+              </label>
+              <label className="field">
+                <span className="field-label">שעת סיום</span>
+                <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+              </label>
+            </div>
+            {/* The Hebrew date is the one the user chose either way; what
+                changes is the civil date it lands on. Saying so plainly is
+                what keeps an evening event from looking like a mistake. */}
+            <p className="day-hint" aria-live="polite">
+              {isEvening ? (
+                <>
+                  <b>ליל {hebrewLabel}</b> — מוצג בתאריך העברי שבחרתם, ונשמר לערב של{' '}
+                  {formatGregorian(eveningDate)}, לאחר השקיעה ({sunsetLocal}).
+                </>
+              ) : (
+                <>
+                  <b>{hebrewLabel}</b> — {formatGregorian(baseDate)}
+                  {sunsetLocal && <> · היום העברי מתחיל אמש ב-{sunsetLocal}</>}
+                </>
+              )}
+              {endsNextDay && <> האירוע מסתיים למחרת בבוקר.</>}
+            </p>
+          </>
         )}
 
         <label className="field">
@@ -179,4 +233,12 @@ export function EventModal({ calendarId, dateIso, event, tzid, onClose, onSaved 
       </form>
     </Modal>
   );
+}
+
+const DAY_MS = 24 * 3600_000;
+
+/** `2026-09-17` as `17.9.2026` — compact enough to sit inside a sentence. */
+function formatGregorian(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return `${Number(d)}.${Number(m)}.${y}`;
 }

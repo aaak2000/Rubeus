@@ -52,17 +52,27 @@ model RefreshToken {
 }
 
 /// Per-user preferences, including the location used for zmanim.
+/// Where the user's day starts. The Hebrew day begins at sunset, so `sunset`
+/// files an evening event under the following Hebrew date — which is what the
+/// date on a Hebrew calendar actually means. `midnight` is offered for people
+/// who would rather see the civil day.
+enum DayBoundary {
+  midnight
+  sunset
+}
+
 model UserSettings {
-  id            String  @id @default(cuid())
-  userId        String  @unique
-  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  il            Boolean @default(false)
+  id            String      @id @default(cuid())
+  userId        String      @unique
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  il            Boolean     @default(false)
   latitude      Float?
   longitude     Float?
-  tzid          String  @default("Asia/Jerusalem")
+  tzid          String      @default("Asia/Jerusalem")
   elevation     Float?
-  candleMinutes Int     @default(18)
-  locale        String  @default("he")
+  candleMinutes Int         @default(18)
+  locale        String      @default("he")
+  dayBoundary   DayBoundary @default(sunset)
 }
 
 model Calendar {

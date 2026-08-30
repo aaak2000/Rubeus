@@ -3,9 +3,11 @@ import type { Event as DbEvent } from '@prisma/client';
 import {
   gregorianRecurrence,
   hebrewDateService,
+  hebrewDayKeyAt,
   hebrewRecurrence,
   zonedDateKey,
   zonedDateTimeToUtc,
+  type GeoPoint,
   type HebrewRecurrenceSpec,
 } from '@hcal/core';
 import { PrismaService } from '../prisma/prisma.service';
@@ -26,9 +28,25 @@ export interface EventInstance {
   hebrewRecurrence: string | null;
   /** True when this row is a generated occurrence of a recurrence. */
   isOccurrence: boolean;
-  /** The calendar day this occurrence falls on in the user's timezone (YYYY-MM-DD). */
+  /** The civil calendar day this occurrence falls on in the user's timezone (YYYY-MM-DD). */
   localDate: string;
+  /**
+   * The day this occurrence belongs to on the Hebrew calendar, named by the
+   * Gregorian date of its daytime half. After sunset this is the day *after*
+   * `localDate`: the Hebrew day has already turned.
+   */
+  hebrewDay: string;
+  /** True when the two disagree — the event falls in the evening. */
+  isEvening: boolean;
   hebrew: { text: string; monthName: string; day: number; year: number };
+}
+
+/** The user context every annotation needs. */
+interface UserContext {
+  tzid: string;
+  /** Null when the user has not set a location; sunset is then unknown. */
+  location: GeoPoint | null;
+  dayBoundary: 'midnight' | 'sunset';
 }
 
 @Injectable()
@@ -39,23 +57,37 @@ export class EventsService {
   ) {}
 
   /**
-   * The Hebrew date an instant falls on, resolved in the user's timezone.
-   * Slicing the UTC string here would file late-evening events under the
-   * previous day.
+   * The Hebrew date an instant falls on, resolved in the user's timezone and
+   * — when a location is known — at the sunset that actually turns the Hebrew
+   * day. Slicing the UTC string here would file late-evening events under the
+   * previous day; ignoring sunset would file them under the previous *Hebrew*
+   * day, which for a Hebrew calendar is the more visible error.
    */
-  private annotate(instantIso: string, tzid: string): EventInstance['hebrew'] {
-    const c = hebrewDateService.fromGregorian(zonedDateKey(new Date(instantIso), tzid));
+  private annotate(hebrewDayKey: string): EventInstance['hebrew'] {
+    const c = hebrewDateService.fromGregorian(hebrewDayKey);
     return { text: c.hebrewText, monthName: c.hebrew.monthName, day: c.hebrew.day, year: c.hebrew.year };
   }
 
-  /** The user's configured timezone, defaulting to Israel time. */
-  private async timezoneOf(userId: string): Promise<string> {
-    const settings = await this.prisma.userSettings.findUnique({ where: { userId } });
-    return settings?.tzid || 'Asia/Jerusalem';
+  /** The user's timezone, location and day-boundary preference. */
+  private async contextOf(userId: string): Promise<UserContext> {
+    const s = await this.prisma.userSettings.findUnique({ where: { userId } });
+    const tzid = s?.tzid || 'Asia/Jerusalem';
+    const location =
+      s && s.latitude !== null && s.longitude !== null
+        ? { latitude: s.latitude, longitude: s.longitude, tzid, elevation: s.elevation ?? 0, il: s.il }
+        : null;
+    return { tzid, location, dayBoundary: s?.dayBoundary ?? 'sunset' };
   }
 
-  private toInstance(e: DbEvent, tzid: string, over: Partial<EventInstance> = {}): EventInstance {
+  private toInstance(e: DbEvent, ctx: UserContext, over: Partial<EventInstance> = {}): EventInstance {
     const start = over.start ?? e.startUtc.toISOString();
+    const localDate = zonedDateKey(new Date(start), ctx.tzid);
+    // An all-day occurrence is a date, not an instant: it has no evening half,
+    // so it stays on its own day whatever the sun is doing.
+    const allDay = over.allDay ?? e.allDay;
+    const hebrewDay = allDay
+      ? localDate
+      : hebrewDayKeyAt(new Date(start), ctx.tzid, ctx.location ?? undefined);
     return {
       id: e.id,
       calendarId: e.calendarId,
@@ -64,12 +96,14 @@ export class EventsService {
       location: e.location,
       start,
       end: over.end ?? e.endUtc.toISOString(),
-      allDay: over.allDay ?? e.allDay,
+      allDay,
       rrule: e.rrule,
       hebrewRecurrence: e.hebrewRecurrence,
       isOccurrence: over.isOccurrence ?? false,
-      localDate: zonedDateKey(new Date(start), tzid),
-      hebrew: this.annotate(start, tzid),
+      localDate,
+      hebrewDay,
+      isEvening: hebrewDay !== localDate,
+      hebrew: this.annotate(hebrewDay),
     };
   }
 
@@ -138,11 +172,13 @@ export class EventsService {
       throw new BadRequestException('Requested range is too large (maximum 3 years)');
     }
 
-    const tzid = await this.timezoneOf(userId);
+    const ctx = await this.contextOf(userId);
+    const tzid = ctx.tzid;
     // Widen the scan by a day on each side so an event whose local day falls
     // inside the window is not dropped because its UTC instant sits just
-    // outside it — a 01:30 Jerusalem event is 22:30Z on the previous date.
-    // The localDate filter below trims the surplus back off.
+    // outside it — a 01:30 Jerusalem event is 22:30Z on the previous date,
+    // and an evening event belongs to the *next* Hebrew day. The day filter
+    // below trims the surplus back off.
     const scanStart = new Date(start.getTime() - DAY_MS);
     const scanEnd = new Date(end.getTime() + DAY_MS);
     const scanFrom = zonedDateKey(scanStart, tzid);
@@ -162,7 +198,7 @@ export class EventsService {
           const dayStart = zonedDateTimeToUtc(occ.gregorian, '00:00', tzid);
           const dayEnd = new Date(dayStart.getTime() + DAY_MS - 1000);
           out.push(
-            this.toInstance(e, tzid, {
+            this.toInstance(e, ctx, {
               start: dayStart.toISOString(),
               end: dayEnd.toISOString(),
               allDay: true,
@@ -175,7 +211,7 @@ export class EventsService {
         for (const occStart of gregorianRecurrence.occurrencesBetween(e.rrule, e.startUtc, scanFrom, scanTo)) {
           const occEnd = new Date(occStart.getTime() + durationMs);
           out.push(
-            this.toInstance(e, tzid, {
+            this.toInstance(e, ctx, {
               start: occStart.toISOString(),
               end: occEnd.toISOString(),
               isOccurrence: true,
@@ -183,15 +219,19 @@ export class EventsService {
           );
         }
       } else if (e.startUtc <= scanEnd && e.endUtc >= scanStart) {
-        out.push(this.toInstance(e, tzid));
+        out.push(this.toInstance(e, ctx));
       }
     }
 
-    // Keep only instances whose local day lies within the requested window.
+    // Keep only instances whose day lies within the requested window, using
+    // the same day scheme the user reads the calendar in: filtering an evening
+    // event by its civil date would drop it from the Hebrew day it is filed
+    // under.
     const fromKey = zonedDateKey(start, tzid);
     const toKey = zonedDateKey(end, tzid);
+    const dayOf = (i: EventInstance) => (ctx.dayBoundary === 'sunset' ? i.hebrewDay : i.localDate);
     return out
-      .filter((i) => i.localDate >= fromKey && i.localDate <= toKey)
+      .filter((i) => dayOf(i) >= fromKey && dayOf(i) <= toKey)
       .sort((a, b) => a.start.localeCompare(b.start));
   }
 }

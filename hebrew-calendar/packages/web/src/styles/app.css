@@ -544,3 +544,7 @@ main { flex: 1; padding: var(--space-5); max-width: 1240px; width: 100%; margin:
   .consent-actions { margin-inline-start: 0; width: 100%; }
   .consent-actions .btn { flex: 1; }
 }
+
+/* Placement hint in the event form: which Hebrew day a time lands on. */
+.day-hint{margin:0;padding:var(--s3) var(--s4);background:var(--surface-sunken);border:1px solid var(--border);border-radius:var(--radius-md);font-size:13px;line-height:1.6;color:var(--ink-muted)}
+.day-hint b{color:var(--ink);font-weight:650}

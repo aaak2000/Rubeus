@@ -16,6 +16,14 @@ export { HebrewRecurrence, hebrewRecurrence } from './HebrewRecurrence.js';
 export type { HebrewRecurrenceSpec } from './HebrewRecurrence.js';
 export { GregorianRecurrence, gregorianRecurrence } from './GregorianRecurrence.js';
 export { restWindowAt, isRestTime, type RestWindow, type RestReason } from './RestTime.js';
+export {
+  hebrewDayKeyAt,
+  hebrewDayBounds,
+  hebrewDayStart,
+  eveningOf,
+  hebrewDateOfDeath,
+  type HebrewDayBounds,
+} from './HebrewDay.js';
 
 // Re-export commonly used hebcal primitives for downstream packages.
 export { HDate, months, gematriya } from '@hebcal/core';

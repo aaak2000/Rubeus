@@ -108,8 +108,15 @@ export interface EventInstance {
   end: string;
   allDay: boolean;
   isOccurrence: boolean;
-  /** Calendar day in the user's timezone (YYYY-MM-DD), resolved server-side. */
+  /** Civil calendar day in the user's timezone (YYYY-MM-DD), resolved server-side. */
   localDate: string;
+  /**
+   * The day this belongs to on the Hebrew calendar. After sunset the Hebrew
+   * day has already turned, so this is the day *after* `localDate`.
+   */
+  hebrewDay: string;
+  /** True when the two differ — the event falls in the evening. */
+  isEvening: boolean;
   hebrewRecurrence: string | null;
   hebrew: { text: string; monthName: string; day: number; year: number };
 }

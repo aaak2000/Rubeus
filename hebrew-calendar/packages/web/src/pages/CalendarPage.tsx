@@ -103,12 +103,16 @@ export function CalendarPage() {
     void loadEvents();
   }, [loadEvents]);
 
+  // Group by the day the server filed each event under. On a Hebrew calendar
+  // that is the sunset-bounded day, so an event at 21:00 shows on the date it
+  // actually belongs to rather than the one its clock happens to read.
   const eventsByDate = useMemo(() => {
     const map = new Map<string, EventInstance[]>();
     for (const e of events) {
-      const arr = map.get(e.localDate) ?? [];
+      const key = e.hebrewDay ?? e.localDate;
+      const arr = map.get(key) ?? [];
       arr.push(e);
-      map.set(e.localDate, arr);
+      map.set(key, arr);
     }
     return map;
   }, [events]);
@@ -245,6 +249,7 @@ export function CalendarPage() {
           calendarId={calendarId}
           dateIso={creatingOn}
           tzid={tzid}
+          geo={geo}
           onClose={() => setCreatingOn(null)}
           onSaved={afterSave}
         />
@@ -254,6 +259,7 @@ export function CalendarPage() {
           calendarId={calendarId}
           event={editing}
           tzid={tzid}
+          geo={geo}
           onClose={() => setEditing(null)}
           onSaved={afterSave}
         />
