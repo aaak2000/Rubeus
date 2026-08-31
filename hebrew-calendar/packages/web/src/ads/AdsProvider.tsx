@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { isRestTime, type GeoPoint } from '@hcal/core';
 import { api, type AdConfig } from '../api/client';
 
@@ -14,6 +22,10 @@ interface AdsState {
   setAdsEnabled: (v: boolean) => void;
   /** True while Shabbat or a festival is in progress at the user's location. */
   resting: boolean;
+  /** True when a paid subscription has removed advertising. */
+  adFree: boolean;
+  /** Re-read the subscription, e.g. after a checkout completes. */
+  refreshEntitlement: () => void;
   /** Everything considered: may an ad be shown right now? */
   canShowAds: boolean;
   setLocation: (geo: GeoPoint | null, il: boolean) => void;
@@ -48,10 +60,24 @@ export function AdsProvider({ children }: { children: ReactNode }) {
   const [geo, setGeo] = useState<GeoPoint | null>(null);
   const [il, setIl] = useState(false);
   const [resting, setResting] = useState(false);
+  const [adFree, setAdFree] = useState(false);
 
   useEffect(() => {
     api.adConfig().then(setConfig).catch(() => setConfig(null));
   }, []);
+
+  // A subscription removes advertising. Checked once per session and again on
+  // demand after a checkout; a failure leaves ads on, which is the safe way to
+  // be wrong — showing ads to a subscriber is a complaint, hiding them from
+  // everyone is lost revenue with no signal.
+  const refreshEntitlement = useCallback(() => {
+    api
+      .billingStatus()
+      .then((s) => setAdFree(s.adFree))
+      .catch(() => setAdFree(false));
+  }, []);
+
+  useEffect(refreshEntitlement, [refreshEntitlement]);
 
   // Shabbat and festivals begin and end at fixed instants, so re-evaluate on a
   // timer rather than only at mount — a session open across candle lighting
@@ -79,13 +105,15 @@ export function AdsProvider({ children }: { children: ReactNode }) {
         write(ENABLED_KEY, String(v));
       },
       resting,
-      canShowAds: adsEnabled && !resting,
+      adFree,
+      refreshEntitlement,
+      canShowAds: adsEnabled && !resting && !adFree,
       setLocation: (g, isIl) => {
         setGeo(g);
         setIl(isIl);
       },
     }),
-    [config, consent, adsEnabled, resting],
+    [config, consent, adsEnabled, resting, adFree, refreshEntitlement],
   );
 
   return <AdsContext.Provider value={value}>{children}</AdsContext.Provider>;

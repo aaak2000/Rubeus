@@ -584,3 +584,10 @@ main { flex: 1; padding: var(--space-5); max-width: 1240px; width: 100%; margin:
   border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);cursor:pointer}
 .chip.on{background:var(--primary);border-color:var(--primary);color:var(--ink-on-accent);font-weight:600}
 @media(max-width:520px){.yz-next{min-width:0}}
+
+/* ---- subscription ---- */
+.sub-price{margin:0;font-size:var(--text-xl)}
+.sub-price strong{font-weight:650}
+.sub-state{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;margin:0}
+.sub-badge{display:inline-block;font-size:var(--text-xs);font-weight:650;padding:2px 10px;border-radius:var(--radius-full);
+  background:var(--recurrence-tint);color:var(--recurrence-tint-ink)}

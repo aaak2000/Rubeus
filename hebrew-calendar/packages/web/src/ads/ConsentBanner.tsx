@@ -15,8 +15,10 @@ import { useAds } from './AdsProvider';
  * misdescribe it — and would collide with the real dialogs on the page.
  */
 export function ConsentBanner() {
-  const { consent, setConsent, adsEnabled, resting } = useAds();
-  if (consent !== null || !adsEnabled || resting) return null;
+  const { consent, setConsent, adsEnabled, resting, adFree } = useAds();
+  // A subscriber is never asked: there are no ads to personalize, so the
+  // question would be noise dressed up as a choice.
+  if (consent !== null || !adsEnabled || resting || adFree) return null;
 
   return (
     <div className="consent" role="region" aria-labelledby="consent-title">

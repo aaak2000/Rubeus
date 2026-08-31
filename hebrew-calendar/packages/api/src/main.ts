@@ -7,7 +7,10 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: false });
+  // rawBody keeps the untouched request bytes, which the billing webhook needs:
+  // a signature is computed over exactly what was sent, and re-serializing the
+  // parsed JSON would never match it.
+  const app = await NestFactory.create(AppModule, { bufferLogs: false, rawBody: true });
   const config = app.get(ConfigService);
   const isProd = config.get<string>('NODE_ENV') === 'production';
 

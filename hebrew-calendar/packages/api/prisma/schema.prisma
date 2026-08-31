@@ -33,6 +33,7 @@ model User {
   refreshTokens RefreshToken[]
   yahrzeits    Yahrzeit[]
   pushSubscriptions PushSubscription[]
+  subscription Subscription?
 }
 
 /// A issued refresh token, stored only as a hash so a database read cannot
@@ -266,4 +267,55 @@ model ReminderDelivery {
 
   @@unique([yahrzeitId, hebrewYear, daysBefore, channel])
   @@index([sentAt])
+}
+
+enum SubscriptionStatus {
+  /// Paying and current.
+  active
+  /// Inside a free trial — entitled, but nothing has been charged yet.
+  trialing
+  /// Payment failed; still entitled while the provider retries.
+  pastDue
+  /// Cancelled but paid up to `currentPeriodEnd`, and entitled until then.
+  canceled
+  /// Over. Not entitled.
+  expired
+}
+
+/// A paid subscription that removes advertising.
+///
+/// Provider-agnostic on purpose: `provider` plus the two provider ids are the
+/// only provider-shaped fields, so swapping billing platforms does not touch
+/// the entitlement check or anything upstream of it.
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String             @unique
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status                 SubscriptionStatus
+  /// e.g. "paddle", or "manual" for a comped account.
+  provider               String
+  providerCustomerId     String?
+  providerSubscriptionId String?            @unique
+  priceCents             Int?
+  currency               String?
+  /// Entitlement runs to here even after cancellation — the period is paid for.
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean            @default(false)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  @@index([status, currentPeriodEnd])
+}
+
+/// A billing webhook already handled.
+///
+/// Providers retry deliveries and do not promise to send each event once, so
+/// the event id is the primary key and a replay becomes a no-op.
+model BillingEvent {
+  id         String   @id
+  provider   String
+  type       String
+  receivedAt DateTime @default(now())
+
+  @@index([receivedAt])
 }

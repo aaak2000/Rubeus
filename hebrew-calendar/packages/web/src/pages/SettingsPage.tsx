@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { currentState, subscribe, unsubscribe, type PushState } from '../notifications/push';
+import { SubscriptionSection } from './SubscriptionSection';
 import { isValidTimeZone, localTimeZone } from '@hcal/core';
 import { api, ApiError, icsExportUrl, type Calendar, type Profile } from '../api/client';
 import { Button, EmptyState, Skeleton, Switch, useToast } from '../ui';
@@ -236,6 +238,10 @@ export function SettingsPage() {
         )}
       </section>
 
+      <NotificationSettings />
+
+      <SubscriptionSection />
+
       <section className="card stack" aria-labelledby="ads-h">
         <div>
           <h2 id="ads-h">מודעות</h2>
@@ -268,5 +274,66 @@ export function SettingsPage() {
         <Link to="/accessibility">הצהרת נגישות</Link>
       </p>
     </div>
+  );
+}
+
+/**
+ * Push opt-in.
+ *
+ * The permission prompt fires only when the switch is turned on — asking on
+ * load is the surest way to a permanent refusal, and a refusal cannot be
+ * undone from inside the page.
+ */
+function NotificationSettings() {
+  const [state, setState] = useState<PushState>('unsubscribed');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    void currentState().then(setState);
+  }, []);
+
+  const on = state === 'subscribed';
+  const blocked = state === 'unsupported' || state === 'denied' || state === 'server-disabled';
+
+  async function toggle(next: boolean) {
+    setBusy(true);
+    try {
+      setState(next ? await subscribe() : await unsubscribe());
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card stack" aria-labelledby="notif-h">
+      <div>
+        <h2 id="notif-h">התראות</h2>
+        <p className="muted text-sm">
+          תזכורת לאזכרות שמגיעה גם כשהאפליקציה סגורה, לפי הימים שבחרתם לכל שם.
+        </p>
+      </div>
+
+      <Switch
+        checked={on}
+        onChange={toggle}
+        disabled={busy || blocked}
+        label="התראות במכשיר הזה"
+        hint="ההרשמה נשמרת לכל מכשיר בנפרד"
+      />
+
+      {state === 'denied' && (
+        <p className="notice">
+          ההרשאה נחסמה בדפדפן. יש לאפשר התראות עבור האתר בהגדרות הדפדפן ואז לנסות שוב.
+        </p>
+      )}
+      {state === 'unsupported' && (
+        <p className="notice">
+          הדפדפן הזה אינו תומך בהתראות. באייפון יש להתקין את האפליקציה למסך הבית תחילה.
+        </p>
+      )}
+      {state === 'server-disabled' && (
+        <p className="notice">התראות אינן מוגדרות בשרת הזה.</p>
+      )}
+    </section>
   );
 }

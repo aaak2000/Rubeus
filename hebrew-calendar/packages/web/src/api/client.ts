@@ -161,6 +161,27 @@ export interface YahrzeitInput {
   note?: string;
   remindDaysBefore?: number[];
 }
+export interface BillingStatus {
+  /** Whether ads should be suppressed for this user right now. */
+  adFree: boolean;
+  status: 'active' | 'trialing' | 'pastDue' | 'canceled' | 'expired' | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  plan: { priceCents: number; currency: string; interval: 'month' };
+  /** False when the deployment has no billing provider configured. */
+  checkoutAvailable: boolean;
+}
+export interface CheckoutInfo {
+  provider: string;
+  priceId: string;
+  clientToken: string | null;
+  environment: string;
+  email: string;
+}
+export interface NotificationConfig {
+  push: { enabled: boolean; publicKey: string | null };
+  email: { enabled: boolean };
+}
 export interface AdConfig {
   network: { enabled: boolean; provider: 'adsense' | null; clientId: string | null };
   interstitial: { minNavigations: number; minMinutesBetween: number; maxPerDay: number };
@@ -226,6 +247,16 @@ export const api = {
   updateYahrzeit: (id: string, body: Partial<YahrzeitInput>) =>
     raw<Yahrzeit>(`/yahrzeits/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteYahrzeit: (id: string) => raw<{ deleted: boolean }>(`/yahrzeits/${id}`, { method: 'DELETE' }),
+  billingStatus: () => raw<BillingStatus>('/billing/status', { method: 'GET' }),
+  checkoutInfo: () => raw<CheckoutInfo>('/billing/checkout', { method: 'GET' }),
+  notificationConfig: () => raw<NotificationConfig>('/notifications/config', { method: 'GET' }),
+  subscribePush: (sub: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
+    raw<{ subscribed: boolean }>('/notifications/push', { method: 'POST', body: JSON.stringify(sub) }),
+  unsubscribePush: (endpoint: string) =>
+    raw<{ unsubscribed: boolean }>('/notifications/push', {
+      method: 'DELETE',
+      body: JSON.stringify({ endpoint }),
+    }),
   adConfig: () => raw<AdConfig>('/ads/config', { method: 'GET' }),
   nextAd: (placement: 'interstitial' | 'inline') =>
     raw<{ ad: ServedAd | null }>(`/ads/next?placement=${placement}`, { method: 'GET' }),

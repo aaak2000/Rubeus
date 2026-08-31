@@ -11,7 +11,11 @@ import { PrismaService } from '../src/prisma/prisma.service';
  */
 export async function createTestApp(): Promise<{ app: INestApplication; prisma: PrismaService }> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-  const app = moduleRef.createNestApplication();
+  // Mirrors main.ts: the billing webhook verifies its signature against the
+  // untouched request bytes, so a test app without rawBody would reject every
+  // valid webhook and pass every negative test — looking green while proving
+  // nothing.
+  const app = moduleRef.createNestApplication({ rawBody: true });
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   await app.init();

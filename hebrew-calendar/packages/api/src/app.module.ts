@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -14,9 +15,12 @@ import { SyncModule } from './sync/sync.module';
 import { HealthModule } from './health/health.module';
 import { AdsModule } from './ads/ads.module';
 import { YahrzeitsModule } from './yahrzeits/yahrzeits.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../../.env', '.env'] }),
     // Baseline abuse protection; auth routes tighten this further.
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 120 }]),
@@ -32,6 +36,8 @@ import { YahrzeitsModule } from './yahrzeits/yahrzeits.module';
     HealthModule,
     AdsModule,
     YahrzeitsModule,
+    NotificationsModule,
+    BillingModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
