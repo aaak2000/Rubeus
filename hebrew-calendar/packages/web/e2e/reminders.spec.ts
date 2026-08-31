@@ -61,11 +61,26 @@ test.describe('memorial register', () => {
   });
 
   test('offers notifications, and does not prompt for permission unasked', async ({ page }) => {
+    // Record every request for the permission. Asserting on
+    // `Notification.permission` instead would test the browser's starting
+    // state — which is "denied" in headless Chromium — rather than what the
+    // app does, and a prompt on load is the fastest route to a permanent
+    // refusal that cannot be undone from inside the page.
+    await page.addInitScript(() => {
+      (window as unknown as { __permissionAsks: number }).__permissionAsks = 0;
+      const real = Notification.requestPermission.bind(Notification);
+      Notification.requestPermission = ((...args: unknown[]) => {
+        (window as unknown as { __permissionAsks: number }).__permissionAsks++;
+        return (real as (...a: unknown[]) => Promise<NotificationPermission>)(...args);
+      }) as typeof Notification.requestPermission;
+    });
+
     await signUp(page);
     await page.goto('/settings');
     await expect(page.getByRole('heading', { name: 'התראות' })).toBeVisible();
     await expect(page.getByLabel('התראות במכשיר הזה')).not.toBeChecked();
-    // A prompt on load is the fastest route to a permanent refusal.
-    expect(await page.evaluate(() => Notification.permission)).toBe('default');
+    expect(
+      await page.evaluate(() => (window as unknown as { __permissionAsks: number }).__permissionAsks),
+    ).toBe(0);
   });
 });
