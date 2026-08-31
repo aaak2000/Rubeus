@@ -45,6 +45,9 @@ export default defineConfig({
         // Each spec registers its own account; the production brute-force
         // limit would reject the later ones.
         AUTH_RATE_LIMIT: '1000',
+        // The whole suite drives the API from one address, so the per-IP
+        // ceiling meant for a single user throttles the run itself.
+        RATE_LIMIT: '100000',
       },
     },
     {

@@ -53,20 +53,37 @@ async function raw<T>(path: string, init: RequestInit, retry = true): Promise<T>
   return text ? (JSON.parse(text) as T) : (undefined as T);
 }
 
-async function tryRefresh(): Promise<boolean> {
-  try {
-    const res = await fetch(`${BASE}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: tokenStore.refresh }),
-    });
-    if (!res.ok) return false;
-    const data = (await res.json()) as AuthResponse;
-    tokenStore.set(data.accessToken, data.refreshToken);
-    return true;
-  } catch {
-    return false;
-  }
+/**
+ * The refresh currently in flight, if any.
+ *
+ * Refresh tokens rotate, and reusing a spent one is treated by the server as
+ * a leak — it revokes the whole session family. A page load fires several
+ * requests at once, so without this every one of them would answer its own
+ * 401 by spending the same token, and the second would log the user out. One
+ * rotation, shared by every caller waiting on it.
+ */
+let refreshInFlight: Promise<boolean> | null = null;
+
+function tryRefresh(): Promise<boolean> {
+  refreshInFlight ??= (async () => {
+    try {
+      const res = await fetch(`${BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: tokenStore.refresh }),
+      });
+      if (!res.ok) return false;
+      const data = (await res.json()) as AuthResponse;
+      tokenStore.set(data.accessToken, data.refreshToken);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      // Cleared only once settled, so a later 401 can refresh again.
+      refreshInFlight = null;
+    }
+  })();
+  return refreshInFlight;
 }
 
 // --- typed response shapes ---

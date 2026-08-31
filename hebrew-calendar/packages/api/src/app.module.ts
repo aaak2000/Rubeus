@@ -18,12 +18,17 @@ import { YahrzeitsModule } from './yahrzeits/yahrzeits.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { BillingModule } from './billing/billing.module';
 
+// Per-IP ceiling for ordinary requests. Configurable for the same reason the
+// auth limit is: an automated suite drives every page from one address, and a
+// production-shaped limit throttles the run rather than an abuser.
+const REQUESTS_PER_MINUTE = Number(process.env.RATE_LIMIT ?? 120);
+
 @Module({
   imports: [
     ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../../.env', '.env'] }),
     // Baseline abuse protection; auth routes tighten this further.
-    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 120 }]),
+    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: REQUESTS_PER_MINUTE }]),
     PrismaModule,
     CommonModule,
     AuthModule,
