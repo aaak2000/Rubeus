@@ -129,6 +129,38 @@ export interface CalendarItem {
   emoji?: string;
   time?: string;
 }
+export interface Yahrzeit {
+  id: string;
+  name: string;
+  hebrewName: string | null;
+  relation: string | null;
+  /** Gregorian date of death, YYYY-MM-DD. */
+  deathDate: string;
+  /** Death after sunset puts the Hebrew date — and the observance — a day on. */
+  afterSunset: boolean;
+  note: string | null;
+  remindDaysBefore: number[];
+  hebrewDateText: string;
+  next: {
+    gregorian: string;
+    hebrewText: string;
+    hebrewYearText: string;
+    hebrewYear: number;
+    daysUntil: number;
+    /** Nightfall the evening before — when the memorial candle is lit. */
+    candleAt: string | null;
+    candleDate: string;
+  } | null;
+}
+export interface YahrzeitInput {
+  name: string;
+  hebrewName?: string;
+  relation?: string;
+  deathDate: string;
+  afterSunset?: boolean;
+  note?: string;
+  remindDaysBefore?: number[];
+}
 export interface AdConfig {
   network: { enabled: boolean; provider: 'adsense' | null; clientId: string | null };
   interstitial: { minNavigations: number; minMinutesBetween: number; maxPerDay: number };
@@ -188,6 +220,12 @@ export const api = {
   googleUrl: () => raw<{ url: string }>('/oauth/google/url', { method: 'GET' }),
   microsoftUrl: () => raw<{ url: string }>('/oauth/microsoft/url', { method: 'GET' }),
   sync: (calendarId: string) => raw<SyncResult>(`/calendars/${calendarId}/sync`, { method: 'POST' }),
+  yahrzeits: () => raw<Yahrzeit[]>('/yahrzeits', { method: 'GET' }),
+  createYahrzeit: (body: YahrzeitInput) =>
+    raw<Yahrzeit>('/yahrzeits', { method: 'POST', body: JSON.stringify(body) }),
+  updateYahrzeit: (id: string, body: Partial<YahrzeitInput>) =>
+    raw<Yahrzeit>(`/yahrzeits/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteYahrzeit: (id: string) => raw<{ deleted: boolean }>(`/yahrzeits/${id}`, { method: 'DELETE' }),
   adConfig: () => raw<AdConfig>('/ads/config', { method: 'GET' }),
   nextAd: (placement: 'interstitial' | 'inline') =>
     raw<{ ad: ServedAd | null }>(`/ads/next?placement=${placement}`, { method: 'GET' }),

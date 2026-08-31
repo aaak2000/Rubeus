@@ -3,6 +3,7 @@ import { useAuth } from './auth/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { RemindersPage } from './pages/RemindersPage';
 import { AccessibilityPage } from './pages/AccessibilityPage';
 import { Button, Skeleton, ThemeToggle } from './ui';
 import { ConsentBanner, InterstitialAd, useInterstitial } from './ads';
@@ -16,6 +17,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   const { ad, dismiss } = useInterstitial(dialogOpen);
   const nav = [
     { to: '/', label: 'יומן' },
+    { to: '/reminders', label: 'תזכורות' },
     { to: '/settings', label: 'הגדרות' },
   ];
   return (
@@ -73,6 +75,14 @@ export function App() {
         element={
           <RequireAuth>
             <CalendarPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/reminders"
+        element={
+          <RequireAuth>
+            <RemindersPage />
           </RequireAuth>
         }
       />

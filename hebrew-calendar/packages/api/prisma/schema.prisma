@@ -31,6 +31,8 @@ model User {
   calendars    Calendar[]
   connections  ProviderConnection[]
   refreshTokens RefreshToken[]
+  yahrzeits    Yahrzeit[]
+  pushSubscriptions PushSubscription[]
 }
 
 /// A issued refresh token, stored only as a hash so a database read cannot
@@ -192,4 +194,76 @@ model AdCampaign {
   updatedAt   DateTime    @updatedAt
 
   @@index([active, placement])
+}
+
+/// A name the user keeps for memorial observance.
+///
+/// The yahrzeit recurs by the Hebrew calendar, so what is stored is the
+/// Gregorian date of death plus whether it fell after sunset — together they
+/// fix the Hebrew date. Storing a converted Hebrew date instead would lose
+/// that distinction, and getting it wrong moves the observance by a day every
+/// year for as long as the record lives.
+model Yahrzeit {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// How the user refers to them — "אבא", or a full name.
+  name        String
+  /// The name used for keil malei / kaddish: פלוני בן/בת פלוני.
+  hebrewName  String?
+  /// Relationship, e.g. "אב", "סבתא". Free text: families differ.
+  relation    String?
+  /// Gregorian date of death, stored date-only at UTC midnight.
+  deathDate   DateTime @db.Date
+  /// True when death occurred after sunset, making the Hebrew date the next day.
+  afterSunset Boolean  @default(false)
+  note        String?
+  /// Days ahead to remind, e.g. [7, 1, 0]. Empty means no reminders.
+  remindDaysBefore Int[] @default([7, 1, 0])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deliveries  ReminderDelivery[]
+
+  @@index([userId])
+}
+
+enum ReminderChannel {
+  inapp
+  push
+  email
+}
+
+/// A browser push endpoint. One row per device the user opted in on.
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// One reminder that has gone out.
+///
+/// The unique key is what makes dispatch idempotent: a scheduler that runs
+/// twice, or a deploy that restarts it mid-run, must not send the same
+/// memorial reminder again.
+model ReminderDelivery {
+  id         String          @id @default(cuid())
+  yahrzeitId String
+  yahrzeit   Yahrzeit        @relation(fields: [yahrzeitId], references: [id], onDelete: Cascade)
+  /// The Hebrew year of the occurrence being reminded about.
+  hebrewYear Int
+  daysBefore Int
+  channel    ReminderChannel
+  sentAt     DateTime        @default(now())
+
+  @@unique([yahrzeitId, hebrewYear, daysBefore, channel])
+  @@index([sentAt])
 }

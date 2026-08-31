@@ -13,6 +13,7 @@ import { OAuthModule } from './oauth/oauth.module';
 import { SyncModule } from './sync/sync.module';
 import { HealthModule } from './health/health.module';
 import { AdsModule } from './ads/ads.module';
+import { YahrzeitsModule } from './yahrzeits/yahrzeits.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AdsModule } from './ads/ads.module';
     SyncModule,
     HealthModule,
     AdsModule,
+    YahrzeitsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
