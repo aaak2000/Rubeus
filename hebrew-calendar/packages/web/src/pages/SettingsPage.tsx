@@ -275,6 +275,20 @@ export function SettingsPage() {
 
       <SubscriptionSection />
 
+      {/* Shown only to whoever runs the deployment. The page and the API both
+          check for themselves; this is the way in, not the gate. */}
+      {profile?.isAdmin && (
+        <section className="card stack" aria-labelledby="admin-h">
+          <div>
+            <h2 id="admin-h">ניהול השירות</h2>
+            <p className="muted text-sm">כלים למפעיל השירות, ולא לבעלי חשבון רגילים.</p>
+          </div>
+          <Link className="btn btn-secondary" to="/admin/ads">
+            ניהול פרסומות
+          </Link>
+        </section>
+      )}
+
       <section className="card stack" aria-labelledby="ads-h">
         <div>
           <h2 id="ads-h">מודעות</h2>

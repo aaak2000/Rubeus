@@ -4,6 +4,11 @@ interface Props {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label: string;
+  /**
+   * The accessible name, when the visible label is not specific enough on its
+   * own — a list of switches all reading "active" names none of them.
+   */
+  srLabel?: string;
   /** Optional hint rendered under the label. */
   hint?: string;
   disabled?: boolean;
@@ -13,7 +18,7 @@ interface Props {
  * A labelled toggle built on a native checkbox, so keyboard interaction and
  * screen-reader semantics come for free and the visual is purely CSS.
  */
-export function Switch({ checked, onChange, label, hint, disabled }: Props) {
+export function Switch({ checked, onChange, label, srLabel, hint, disabled }: Props) {
   const id = useId();
   const hintId = `${id}-hint`;
   return (
@@ -25,6 +30,7 @@ export function Switch({ checked, onChange, label, hint, disabled }: Props) {
         className="switch-input"
         checked={checked}
         disabled={disabled}
+        aria-label={srLabel}
         aria-describedby={hint ? hintId : undefined}
         onChange={(e) => onChange(e.target.checked)}
       />

@@ -2,6 +2,7 @@ import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ConsentBanner, InterstitialAd, useInterstitial } from './ads';
 import { useAuth } from './auth/AuthContext';
 import { AccessibilityPage } from './pages/AccessibilityPage';
+import { AdminAdsPage } from './pages/AdminAdsPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { LoginPage } from './pages/LoginPage';
 import { RemindersPage } from './pages/RemindersPage';
@@ -96,6 +97,17 @@ export function App() {
         element={
           <RequireAuth>
             <SettingsPage />
+          </RequireAuth>
+        }
+      />
+      {/* Not in the main nav: it is for the one account that runs the
+          deployment, and a fourth item overflows the top bar at phone width.
+          Reached from settings instead. */}
+      <Route
+        path="/admin/ads"
+        element={
+          <RequireAuth>
+            <AdminAdsPage />
           </RequireAuth>
         }
       />

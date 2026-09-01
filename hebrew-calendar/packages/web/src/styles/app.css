@@ -614,3 +614,24 @@ main { flex: 1; padding: var(--space-5); max-width: 1240px; width: 100%; margin:
 .danger-zone { border-color: var(--danger, var(--border-strong)); }
 .danger-zone h2 { color: var(--danger, var(--ink)); }
 .row-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+/* --- campaign management (operators only) --- */
+.camp-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-3)}
+.camp-card{display:flex;gap:var(--space-4);align-items:center;justify-content:space-between;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-4)}
+/* A paused campaign stays legible — muted, not hidden: it is still inventory
+   the operator has to reason about. */
+.camp-card.is-paused{background:var(--surface-hover);border-style:dashed}
+.camp-card.is-paused .camp-title,.camp-card.is-paused .camp-advertiser{color:var(--ink-muted)}
+.camp-main{flex:1 1 240px;text-align:start;background:none;border:0;padding:0;font:inherit;color:inherit;
+  cursor:pointer;display:grid;gap:2px;align-content:start;border-radius:var(--radius-sm)}
+.camp-head{display:flex;align-items:baseline;gap:var(--space-2);flex-wrap:wrap}
+.camp-title{font-weight:650;font-size:16px}
+.camp-advertiser{font-size:12px;color:var(--ink-subtle);border:1px solid var(--border);border-radius:var(--radius-full);padding:0 8px}
+.camp-body{margin:2px 0 0;font-size:13px;color:var(--ink-muted)}
+.camp-target{margin:2px 0 0;font-size:12px;color:var(--ink-muted);direction:ltr;text-align:start;
+  overflow-wrap:anywhere}
+.camp-flight{margin:2px 0 0}
+.camp-stats{display:flex;gap:var(--space-4);flex-wrap:wrap;align-items:baseline}
+.camp-stat{font-size:12px;color:var(--ink-muted);display:flex;gap:4px;align-items:baseline}
+.camp-stat strong{font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}

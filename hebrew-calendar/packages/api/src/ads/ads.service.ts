@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { type AdCampaign, AdPlacement } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -9,6 +9,35 @@ export interface AdConfig {
   network: { enabled: boolean; provider: 'adsense' | null; clientId: string | null };
   /** Interstitial pacing, enforced client-side and stated here so it is auditable. */
   interstitial: { minNavigations: number; minMinutesBetween: number; maxPerDay: number };
+}
+
+/** A campaign as the operator sees it, counters included. */
+export interface CampaignView extends ServedAd {
+  placement: AdPlacement;
+  weight: number;
+  active: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+  impressions: number;
+  clicks: number;
+  /** Clicks per impression, or null before there is anything to divide by. */
+  clickRate: number | null;
+  createdAt: string;
+}
+
+function toView(c: AdCampaign): CampaignView {
+  return {
+    ...toServed(c),
+    placement: c.placement,
+    weight: c.weight,
+    active: c.active,
+    startsAt: c.startsAt?.toISOString() ?? null,
+    endsAt: c.endsAt?.toISOString() ?? null,
+    impressions: c.impressions,
+    clicks: c.clicks,
+    clickRate: c.impressions > 0 ? c.clicks / c.impressions : null,
+    createdAt: c.createdAt.toISOString(),
+  };
 }
 
 /** An ad as served to the client. */
@@ -99,4 +128,102 @@ export class AdsService {
     await this.prisma.adCampaign.update({ where: { id }, data: { clicks: { increment: 1 } } });
     return { targetUrl: campaign.targetUrl };
   }
+  // --- operator-facing campaign management ---
+
+  /** Every campaign, newest first, with its counters. */
+  async listCampaigns(): Promise<CampaignView[]> {
+    const rows = await this.prisma.adCampaign.findMany({ orderBy: { createdAt: 'desc' } });
+    return rows.map(toView);
+  }
+
+  async createCampaign(input: CampaignInput): Promise<CampaignView> {
+    const { startsAt, endsAt } = this.flightDates(input.startsAt, input.endsAt);
+    const row = await this.prisma.adCampaign.create({
+      data: {
+        advertiser: input.advertiser as string,
+        title: input.title as string,
+        body: input.body ?? null,
+        imageUrl: input.imageUrl ?? null,
+        targetUrl: input.targetUrl as string,
+        placement: input.placement ?? AdPlacement.interstitial,
+        weight: input.weight ?? 1,
+        active: input.active ?? true,
+        startsAt,
+        endsAt,
+      },
+    });
+    return toView(row);
+  }
+
+  async updateCampaign(id: string, input: CampaignInput): Promise<CampaignView> {
+    const existing = await this.prisma.adCampaign.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Campaign not found');
+
+    // A field absent from the body is left alone; one sent as null is cleared.
+    // Collapsing those two into "falsy means clear" would wipe a campaign's
+    // picture every time someone edited its title.
+    const data: Record<string, unknown> = {};
+    for (const key of [
+      'advertiser',
+      'title',
+      'targetUrl',
+      'placement',
+      'weight',
+      'active',
+    ] as const) {
+      if (input[key] !== undefined) data[key] = input[key];
+    }
+    for (const key of ['body', 'imageUrl'] as const) {
+      if (input[key] !== undefined) data[key] = input[key] ?? null;
+    }
+
+    const { startsAt, endsAt } = this.flightDates(
+      input.startsAt === undefined ? (existing.startsAt?.toISOString() ?? null) : input.startsAt,
+      input.endsAt === undefined ? (existing.endsAt?.toISOString() ?? null) : input.endsAt,
+    );
+    if (input.startsAt !== undefined) data.startsAt = startsAt;
+    if (input.endsAt !== undefined) data.endsAt = endsAt;
+
+    return toView(await this.prisma.adCampaign.update({ where: { id }, data }));
+  }
+
+  async deleteCampaign(id: string): Promise<{ deleted: true }> {
+    const existing = await this.prisma.adCampaign.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Campaign not found');
+    await this.prisma.adCampaign.delete({ where: { id } });
+    return { deleted: true };
+  }
+
+  /**
+   * Parse the flight window, refusing one that can never run.
+   *
+   * A campaign ending before it starts is silently ineligible forever: it is
+   * accepted, appears in the list as active, and never serves. Better to
+   * refuse it than to let the operator wonder why nothing shows.
+   */
+  private flightDates(
+    startsAt: string | null | undefined,
+    endsAt: string | null | undefined,
+  ): { startsAt: Date | null; endsAt: Date | null } {
+    const start = startsAt ? new Date(startsAt) : null;
+    const end = endsAt ? new Date(endsAt) : null;
+    if (start && end && end.getTime() < start.getTime()) {
+      throw new BadRequestException('endsAt is before startsAt, so the campaign could never run');
+    }
+    return { startsAt: start, endsAt: end };
+  }
+}
+
+/** The writable shape of a campaign; every field optional at this layer. */
+export interface CampaignInput {
+  advertiser?: string;
+  title?: string;
+  body?: string | null;
+  imageUrl?: string | null;
+  targetUrl?: string;
+  placement?: AdPlacement;
+  weight?: number;
+  active?: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
 }

@@ -52,6 +52,10 @@ export default defineConfig({
         // The whole suite drives the API from one address, so the per-IP
         // ceiling meant for a single user throttles the run itself.
         RATE_LIMIT: '100000',
+        // The one account the admin spec signs in as. Being an operator is an
+        // environment allowlist rather than a property of the account, which
+        // is exactly why a test can arrange it here.
+        ADMIN_EMAILS: 'e2e-operator@example.test',
       },
     },
     {

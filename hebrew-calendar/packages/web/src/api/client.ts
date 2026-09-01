@@ -214,10 +214,47 @@ export interface ServedAd {
   imageUrl: string | null;
   targetUrl: string;
 }
+export type AdPlacementName = 'interstitial' | 'inline';
+
+/** A campaign as the operator sees it, counters included. */
+export interface Campaign {
+  id: string;
+  advertiser: string;
+  title: string;
+  body: string | null;
+  imageUrl: string | null;
+  targetUrl: string;
+  placement: AdPlacementName;
+  weight: number;
+  active: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+  impressions: number;
+  clicks: number;
+  clickRate: number | null;
+  createdAt: string;
+}
+
+export interface CampaignInput {
+  advertiser?: string;
+  title?: string;
+  body?: string | null;
+  imageUrl?: string | null;
+  targetUrl?: string;
+  placement?: AdPlacementName;
+  weight?: number;
+  active?: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
+}
+
 export interface Profile {
   id: string;
   email: string;
   displayName: string | null;
+  /** Whether this account may reach the operator tools. Display only — the
+      server decides access, and does so from the same allowlist. */
+  isAdmin: boolean;
   settings: {
     il: boolean;
     latitude: number | null;
@@ -307,6 +344,13 @@ export const api = {
       body: JSON.stringify({ endpoint }),
     }),
   adConfig: () => raw<AdConfig>('/ads/config', { method: 'GET' }),
+  adminCampaigns: () => raw<Campaign[]>('/admin/ads', { method: 'GET' }),
+  adminCreateCampaign: (input: CampaignInput) =>
+    raw<Campaign>('/admin/ads', { method: 'POST', body: JSON.stringify(input) }),
+  adminUpdateCampaign: (id: string, input: CampaignInput) =>
+    raw<Campaign>(`/admin/ads/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  adminDeleteCampaign: (id: string) =>
+    raw<{ deleted: true }>(`/admin/ads/${id}`, { method: 'DELETE' }),
   nextAd: (placement: 'interstitial' | 'inline') =>
     raw<{ ad: ServedAd | null }>(`/ads/next?placement=${placement}`, { method: 'GET' }),
   adClick: (id: string) => raw<{ targetUrl: string }>(`/ads/${id}/click`, { method: 'POST' }),

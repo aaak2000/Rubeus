@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { AdminModule } from './admin/admin.module';
 import { AdsModule } from './ads/ads.module';
 import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
@@ -40,6 +41,7 @@ const REQUESTS_PER_MINUTE = Number(process.env.RATE_LIMIT ?? 120);
     SyncModule,
     HealthModule,
     AdsModule,
+    AdminModule,
     YahrzeitsModule,
     NotificationsModule,
     BillingModule,
