@@ -76,6 +76,14 @@ model UserSettings {
   candleMinutes Int         @default(18)
   locale        String      @default("he")
   dayBoundary   DayBoundary @default(sunset)
+
+  /// Whether reminders may be sent by email. Push is opted into per device and
+  /// so needs no flag here; email has no such moment, and sending it to
+  /// everyone who happens to have a record is not a choice the user made.
+  emailReminders Boolean @default(true)
+  /// Local hour (0-23) at which reminders should arrive, in the user's own
+  /// timezone. A single UTC hour lands late at night outside Israel.
+  reminderHour   Int     @default(9)
 }
 
 model Calendar {

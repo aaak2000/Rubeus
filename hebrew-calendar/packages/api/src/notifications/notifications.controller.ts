@@ -31,6 +31,7 @@ export class NotificationsController {
     private readonly mail: MailService,
   ) {}
 
+
   /**
    * What the client needs to offer notifications: the VAPID key, and which
    * channels this deployment can actually deliver on. A UI that offers a

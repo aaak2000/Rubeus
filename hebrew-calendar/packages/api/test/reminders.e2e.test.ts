@@ -13,7 +13,13 @@ let token: string;
 let reminders: RemindersService;
 let prisma: PrismaService;
 
-/** Mail and push are replaced with recorders — no network, no real sends. */
+/**
+ * Mail and push are replaced with recorders — no network, no real sends.
+ *
+ * Dispatch is driven with `atHourOnly: false` throughout: these cover what
+ * gets sent and how often, not whether the user's chosen hour has come round,
+ * which `optout.e2e` covers on its own.
+ */
 const outbox: { to: string; subject: string }[] = [];
 const pushed: { userId: string; title: string }[] = [];
 
@@ -48,17 +54,23 @@ afterAll(async () => {
 });
 
 /**
- * A death date whose yahrzeit lands exactly `daysAhead` from today, so the
- * reminder is due now. Working backwards through the Hebrew calendar is the
- * only way to build this: the Gregorian date moves every year.
+ * A death date whose yahrzeit lands exactly `daysAhead` from today.
+ *
+ * "Today" has to be measured in the same timezone the service measures it in —
+ * Asia/Jerusalem, the default. Building the target from UTC instead makes the
+ * test pass only when the two agree, so it would start failing every evening
+ * once UTC and Jerusalem fall on different dates.
  */
 function deathDateForYahrzeitIn(daysAhead: number): string {
-  const target = new Date();
-  target.setUTCHours(0, 0, 0, 0);
+  const todayThere = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  const target = new Date(`${todayThere}T00:00:00.000Z`);
   target.setUTCDate(target.getUTCDate() + daysAhead);
   const hd = new HDate(target);
-  // Same Hebrew date, several years back — far enough that the yahrzeit has
-  // begun recurring.
   const past = new HDate(hd.getDate(), hd.getMonth(), hd.getFullYear() - 5);
   return past.greg().toISOString().slice(0, 10);
 }
@@ -77,7 +89,7 @@ describe('yahrzeit reminder dispatch', () => {
     id = created.body.id;
     expect(created.body.next.daysUntil).toBe(7);
 
-    const due = await reminders.findDue();
+    const due = await reminders.findDue(new Date(), false);
     const mine = due.filter((d) => d.yahrzeitId === id);
     expect(mine).toHaveLength(1);
     expect(mine[0].daysBefore).toBe(7);
@@ -86,7 +98,7 @@ describe('yahrzeit reminder dispatch', () => {
   it('sends on both channels and names the person', async () => {
     outbox.length = 0;
     pushed.length = 0;
-    await reminders.dispatch();
+    await reminders.dispatch(new Date(), false);
 
     expect(pushed.some((p) => p.title.includes('סבתא מרים'))).toBe(true);
     expect(outbox.some((m) => m.subject.includes('סבתא מרים'))).toBe(true);
@@ -97,7 +109,7 @@ describe('yahrzeit reminder dispatch', () => {
   it('never sends the same reminder twice', async () => {
     outbox.length = 0;
     pushed.length = 0;
-    const second = await reminders.dispatch();
+    const second = await reminders.dispatch(new Date(), false);
 
     // The delivery rows from the first run claim it; nothing new goes out.
     expect(outbox).toHaveLength(0);
@@ -123,7 +135,7 @@ describe('yahrzeit reminder dispatch', () => {
     mail.send = async () => false;
     push.sendToUser = async () => 0;
     try {
-      await reminders.dispatch();
+      await reminders.dispatch(new Date(), false);
       const rows = await prisma.reminderDelivery.findMany({
         where: { yahrzeitId: failing.body.id },
       });
@@ -136,7 +148,7 @@ describe('yahrzeit reminder dispatch', () => {
 
     // With delivery working again the reminder still goes out.
     outbox.length = 0;
-    await reminders.dispatch();
+    await reminders.dispatch(new Date(), false);
     expect(outbox.some((m) => m.subject.includes('נכשל'))).toBe(true);
   });
 
@@ -144,7 +156,7 @@ describe('yahrzeit reminder dispatch', () => {
     const later = await auth(request(app.getHttpServer()).post('/api/yahrzeits'))
       .send({ name: 'רחוק', deathDate: deathDateForYahrzeitIn(40), remindDaysBefore: [7, 1, 0] })
       .expect(201);
-    const due = await reminders.findDue();
+    const due = await reminders.findDue(new Date(), false);
     expect(due.some((d) => d.yahrzeitId === later.body.id)).toBe(false);
   });
 
@@ -152,7 +164,7 @@ describe('yahrzeit reminder dispatch', () => {
     const quiet = await auth(request(app.getHttpServer()).post('/api/yahrzeits'))
       .send({ name: 'שקט', deathDate: deathDateForYahrzeitIn(7), remindDaysBefore: [] })
       .expect(201);
-    const due = await reminders.findDue();
+    const due = await reminders.findDue(new Date(), false);
     expect(due.some((d) => d.yahrzeitId === quiet.body.id)).toBe(false);
   });
 });

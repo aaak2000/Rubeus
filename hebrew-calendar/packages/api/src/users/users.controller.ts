@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Patch, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -16,6 +16,12 @@ export class UsersController {
   @Get()
   profile(@CurrentUser() user: AuthUser) {
     return this.users.profile(user.userId);
+  }
+
+  /** Irreversible, and the UI says so before calling it. */
+  @Delete()
+  deleteAccount(@CurrentUser() user: AuthUser) {
+    return this.users.deleteAccount(user.userId);
   }
 
   @Patch('settings')

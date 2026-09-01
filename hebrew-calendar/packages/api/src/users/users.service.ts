@@ -22,6 +22,19 @@ export class UsersService {
     return user;
   }
 
+  /**
+   * Delete the account and everything hanging off it.
+   *
+   * Every relation is declared `onDelete: Cascade`, so removing the user row
+   * takes settings, calendars, events, provider connections, refresh tokens,
+   * push subscriptions and yahrzeits with it. Anything that survived would be
+   * data the user believes is gone, which is worse than never offering this.
+   */
+  async deleteAccount(userId: string) {
+    await this.prisma.user.delete({ where: { id: userId } });
+    return { deleted: true };
+  }
+
   async updateSettings(userId: string, dto: UpdateSettingsDto) {
     return this.prisma.userSettings.upsert({
       where: { userId },

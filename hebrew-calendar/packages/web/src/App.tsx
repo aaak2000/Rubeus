@@ -4,6 +4,7 @@ import { LoginPage } from './pages/LoginPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { RemindersPage } from './pages/RemindersPage';
+import { UnsubscribePage } from './pages/UnsubscribePage';
 import { AccessibilityPage } from './pages/AccessibilityPage';
 import { Button, Skeleton, ThemeToggle } from './ui';
 import { ConsentBanner, InterstitialAd, useInterstitial } from './ads';
@@ -70,6 +71,9 @@ export function App() {
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
       <Route path="/accessibility" element={<AccessibilityPage />} />
+      {/* Public on purpose: an unsubscribe link that demands a login is one
+          most people answer by marking the mail as spam instead. */}
+      <Route path="/unsubscribe" element={<UnsubscribePage />} />
       <Route
         path="/"
         element={

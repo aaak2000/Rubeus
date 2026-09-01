@@ -6,6 +6,7 @@ import { isValidTimeZone, localTimeZone } from '@hcal/core';
 import { api, ApiError, icsExportUrl, type Calendar, type Profile } from '../api/client';
 import { Button, EmptyState, Skeleton, Switch, useToast } from '../ui';
 import { useAds } from '../ads';
+import { useAuth } from '../auth/AuthContext';
 
 const PROVIDER_NAMES: Record<string, string> = {
   google: 'Google Calendar',
@@ -270,6 +271,8 @@ export function SettingsPage() {
         )}
       </section>
 
+      <DeleteAccountSection />
+
       <p className="text-sm">
         <Link to="/accessibility">הצהרת נגישות</Link>
       </p>
@@ -278,19 +281,54 @@ export function SettingsPage() {
 }
 
 /**
- * Push opt-in.
+ * How reminders reach the user.
  *
- * The permission prompt fires only when the switch is turned on — asking on
- * load is the surest way to a permanent refusal, and a refusal cannot be
- * undone from inside the page.
+ * Push is per device, so it is opted into here and stored in the browser's own
+ * subscription. Email is per account and has no equivalent moment of consent,
+ * so it gets an explicit switch — sending it to everyone who happens to keep a
+ * record is not a choice anybody made.
+ *
+ * The permission prompt fires only when the push switch is turned on. Asking on
+ * load is the surest way to a permanent refusal, which cannot be undone from
+ * inside the page.
  */
 function NotificationSettings() {
+  const toast = useToast();
   const [state, setState] = useState<PushState>('unsubscribed');
   const [busy, setBusy] = useState(false);
+  const [emailOn, setEmailOn] = useState(true);
+  const [hour, setHour] = useState(9);
 
   useEffect(() => {
     void currentState().then(setState);
+    api
+      .profile()
+      .then((p) => {
+        if (!p.settings) return;
+        setEmailOn(p.settings.emailReminders);
+        setHour(p.settings.reminderHour);
+      })
+      .catch(() => undefined);
   }, []);
+
+  async function saveEmail(next: boolean) {
+    setEmailOn(next);
+    try {
+      await api.updateSettings({ emailReminders: next });
+    } catch {
+      setEmailOn(!next);
+      toast.error('שמירת ההעדפה נכשלה');
+    }
+  }
+
+  async function saveHour(next: number) {
+    setHour(next);
+    try {
+      await api.updateSettings({ reminderHour: next });
+    } catch {
+      toast.error('שמירת השעה נכשלה');
+    }
+  }
 
   const on = state === 'subscribed';
   const blocked = state === 'unsupported' || state === 'denied' || state === 'server-disabled';
@@ -321,6 +359,25 @@ function NotificationSettings() {
         hint="ההרשמה נשמרת לכל מכשיר בנפרד"
       />
 
+      <Switch
+        checked={emailOn}
+        onChange={saveEmail}
+        label="תזכורות במייל"
+        hint="כל הודעה כוללת קישור להסרה, גם בלי להתחבר"
+      />
+
+      <label className="field">
+        <span className="field-label">שעת התזכורת</span>
+        <select value={hour} onChange={(e) => saveHour(Number(e.target.value))}>
+          {Array.from({ length: 24 }, (_, h) => (
+            <option key={h} value={h}>
+              {String(h).padStart(2, '0')}:00
+            </option>
+          ))}
+        </select>
+        <span className="field-hint">לפי שעון האזור שהגדרתם, לא לפי שעון השרת.</span>
+      </label>
+
       {state === 'denied' && (
         <p className="notice">
           ההרשאה נחסמה בדפדפן. יש לאפשר התראות עבור האתר בהגדרות הדפדפן ואז לנסות שוב.
@@ -333,6 +390,80 @@ function NotificationSettings() {
       )}
       {state === 'server-disabled' && (
         <p className="notice">התראות אינן מוגדרות בשרת הזה.</p>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Deleting the account.
+ *
+ * Kept last and visually separate, because it is the one control here that
+ * cannot be undone. The confirmation asks for the word rather than a yes/no,
+ * so it cannot be cleared by a reflex tap — everything goes: events, calendars,
+ * connected accounts and the memorial records, which are the part nobody can
+ * reconstruct from memory.
+ */
+function DeleteAccountSection() {
+  const toast = useToast();
+  const { logout } = useAuth();
+  const [confirming, setConfirming] = useState(false);
+  const [typed, setTyped] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const PHRASE = 'מחיקה';
+
+  async function remove() {
+    setBusy(true);
+    try {
+      await api.deleteAccount();
+      toast.success('החשבון נמחק');
+      logout();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'מחיקת החשבון נכשלה');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card stack danger-zone" aria-labelledby="danger-h">
+      <div>
+        <h2 id="danger-h">מחיקת החשבון</h2>
+        <p className="muted text-sm">
+          מוחק את החשבון ואת כל מה שנשמר בו: אירועים, יומנים, חשבונות מחוברים ורשימת
+          האזכרות. לא ניתן לשחזר.
+        </p>
+      </div>
+
+      {!confirming ? (
+        <Button variant="danger" onClick={() => setConfirming(true)}>
+          מחיקת החשבון
+        </Button>
+      ) : (
+        <>
+          <label className="field">
+            <span className="field-label">כדי לאשר, הקלידו: {PHRASE}</span>
+            <input
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              autoComplete="off"
+              autoFocus
+            />
+          </label>
+          <div className="row-actions">
+            <Button
+              variant="danger"
+              onClick={remove}
+              disabled={typed.trim() !== PHRASE}
+              loading={busy}
+            >
+              מחיקה סופית
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirming(false)} disabled={busy}>
+              ביטול
+            </Button>
+          </div>
+        </>
       )}
     </section>
   );

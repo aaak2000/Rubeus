@@ -178,6 +178,9 @@ export interface YahrzeitInput {
   note?: string;
   remindDaysBefore?: number[];
 }
+export interface UnsubscribeResult {
+  unsubscribed: boolean;
+}
 export interface BillingStatus {
   /** Whether ads should be suppressed for this user right now. */
   adFree: boolean;
@@ -222,6 +225,10 @@ export interface Profile {
     tzid: string;
     candleMinutes: number;
     locale: string;
+    /** Reminder email on or off. Push is opted into per device instead. */
+    emailReminders: boolean;
+    /** Local hour reminders arrive at, in the user's own timezone. */
+    reminderHour: number;
   } | null;
   connections: { id: string; provider: string; accountEmail: string | null }[];
 }
@@ -264,6 +271,11 @@ export const api = {
   updateYahrzeit: (id: string, body: Partial<YahrzeitInput>) =>
     raw<Yahrzeit>(`/yahrzeits/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteYahrzeit: (id: string) => raw<{ deleted: boolean }>(`/yahrzeits/${id}`, { method: 'DELETE' }),
+  deleteAccount: () => raw<{ deleted: boolean }>('/me', { method: 'DELETE' }),
+  unsubscribeEmail: (token: string) =>
+    raw<UnsubscribeResult>(`/notifications/unsubscribe?token=${encodeURIComponent(token)}`, {
+      method: 'POST',
+    }),
   billingStatus: () => raw<BillingStatus>('/billing/status', { method: 'GET' }),
   checkoutInfo: () => raw<CheckoutInfo>('/billing/checkout', { method: 'GET' }),
   notificationConfig: () => raw<NotificationConfig>('/notifications/config', { method: 'GET' }),

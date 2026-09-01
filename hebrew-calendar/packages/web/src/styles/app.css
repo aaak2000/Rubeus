@@ -608,3 +608,9 @@ main { flex: 1; padding: var(--space-5); max-width: 1240px; width: 100%; margin:
   margin-inline-end: 4px; flex: none;
 }
 .chip-eve-time { font-size: var(--text-xs); color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+
+/* ---- danger zone ----
+   Set apart because it is the only irreversible control on the page. */
+.danger-zone { border-color: var(--danger, var(--border-strong)); }
+.danger-zone h2 { color: var(--danger, var(--ink)); }
+.row-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }

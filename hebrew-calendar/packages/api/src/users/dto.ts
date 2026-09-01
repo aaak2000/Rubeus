@@ -14,4 +14,10 @@ export class UpdateSettingsDto {
    * boundary and the default; `midnight` shows the civil day instead.
    */
   @IsOptional() @IsIn(['midnight', 'sunset']) dayBoundary?: 'midnight' | 'sunset';
+
+  /** Reminder email on or off. Push is opted into per device instead. */
+  @IsOptional() @IsBoolean() emailReminders?: boolean;
+
+  /** Local hour reminders should arrive at, in the user's own timezone. */
+  @IsOptional() @IsInt() @Min(0) @Max(23) reminderHour?: number;
 }
