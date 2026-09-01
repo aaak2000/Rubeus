@@ -50,6 +50,10 @@ export function useInterstitial(suppressed: boolean) {
 
   const dismiss = useCallback(() => setAd(null), []);
 
+  // location.key is the trigger rather than a value the body reads: it changes
+  // on every navigation, which is exactly when this effect must run. Removing
+  // it, as the rule suggests, would stop interstitials appearing at all.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: location.key is the navigation trigger
   useEffect(() => {
     // The navigation that mounts the app is not a transition the user made.
     if (firstNavigation.current) {

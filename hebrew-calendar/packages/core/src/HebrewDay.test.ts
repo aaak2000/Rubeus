@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { HDate } from '@hebcal/core';
+import { describe, expect, it } from 'vitest';
 import {
   eveningOf,
   hebrewDateOfDeath,

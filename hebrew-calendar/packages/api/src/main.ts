@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
@@ -18,7 +18,10 @@ async function bootstrap(): Promise<void> {
   // Swagger's UI needs inline styles/scripts, so its CSP is relaxed only when
   // the docs are actually served (development).
   app.use(helmet({ contentSecurityPolicy: isProd ? undefined : false }));
-  app.enableCors({ origin: config.get<string>('WEB_ORIGIN') ?? 'http://localhost:5173', credentials: true });
+  app.enableCors({
+    origin: config.get<string>('WEB_ORIGIN') ?? 'http://localhost:5173',
+    credentials: true,
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -34,7 +37,9 @@ async function bootstrap(): Promise<void> {
   if (!isProd) {
     const swagger = new DocumentBuilder()
       .setTitle('Hebrew Calendar API')
-      .setDescription('Standalone Hebrew calendar with two-way sync to Google, Microsoft, CalDAV and ICS.')
+      .setDescription(
+        'Standalone Hebrew calendar with two-way sync to Google, Microsoft, CalDAV and ICS.',
+      )
       .setVersion('0.1.0')
       .addBearerAuth()
       .build();
@@ -44,7 +49,9 @@ async function bootstrap(): Promise<void> {
   const port = Number(config.get<string>('PORT') ?? 3001);
   await app.listen(port);
   // eslint-disable-next-line no-console
-  console.log(`Hebrew Calendar API listening on http://localhost:${port}${isProd ? '' : ' (docs at /docs)'}`);
+  console.log(
+    `Hebrew Calendar API listening on http://localhost:${port}${isProd ? '' : ' (docs at /docs)'}`,
+  );
 }
 
 void bootstrap();

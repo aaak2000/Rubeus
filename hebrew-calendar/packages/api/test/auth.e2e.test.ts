@@ -1,6 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp, uniqueEmail } from './setup';
 
 let app: INestApplication;
@@ -15,7 +15,10 @@ afterAll(async () => {
 const server = () => request(app.getHttpServer());
 
 async function registerUser(email = uniqueEmail('auth')) {
-  const res = await server().post('/api/auth/register').send({ email, password: 'password123' }).expect(201);
+  const res = await server()
+    .post('/api/auth/register')
+    .send({ email, password: 'password123' })
+    .expect(201);
   return { email, ...res.body };
 }
 
@@ -33,13 +36,19 @@ describe('auth', () => {
   });
 
   it('rejects a weak password', async () => {
-    await server().post('/api/auth/register').send({ email: uniqueEmail(), password: 'short' }).expect(400);
+    await server()
+      .post('/api/auth/register')
+      .send({ email: uniqueEmail(), password: 'short' })
+      .expect(400);
   });
 
   it('signs in with the right password and refuses the wrong one', async () => {
     const { email } = await registerUser();
     await server().post('/api/auth/login').send({ email, password: 'password123' }).expect(201);
-    await server().post('/api/auth/login').send({ email, password: 'not-the-password' }).expect(401);
+    await server()
+      .post('/api/auth/login')
+      .send({ email, password: 'not-the-password' })
+      .expect(401);
   });
 
   // The regression this suite exists for: with whitelist:true and no
@@ -54,7 +63,8 @@ describe('auth', () => {
 
   it('rejects reuse of a rotated refresh token and revokes the family', async () => {
     const { refreshToken } = await registerUser();
-    const rotated = (await server().post('/api/auth/refresh').send({ refreshToken }).expect(201)).body.refreshToken;
+    const rotated = (await server().post('/api/auth/refresh').send({ refreshToken }).expect(201))
+      .body.refreshToken;
     // Replaying the old token signals a leak.
     await server().post('/api/auth/refresh').send({ refreshToken }).expect(401);
     // ...so the token issued from it is revoked too.

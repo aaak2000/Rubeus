@@ -1,6 +1,6 @@
-import { Event, HDate, HebrewCalendar, Location, Molad } from '@hebcal/core';
+import { type Event, HDate, HebrewCalendar, Location, Molad } from '@hebcal/core';
+import { formatTimeInTz, fromIsoDate, toIsoDate } from './dateUtils.js';
 import type { CalendarItem, GeoPoint } from './types.js';
-import { fromIsoDate, formatTimeInTz, toIsoDate } from './dateUtils.js';
 
 export interface HolidayQueryOptions {
   /** Use the Israel holiday scheme (one-day yom tov). Default false (diaspora). */
@@ -103,7 +103,10 @@ export class HolidayService {
    * @param hebrewYear Hebrew year
    * @param month Hebrew month (1=Nisan .. 7=Tishrei)
    */
-  molad(hebrewYear: number, month: number): {
+  molad(
+    hebrewYear: number,
+    month: number,
+  ): {
     monthName: string;
     dayOfWeek: number;
     hour: number;

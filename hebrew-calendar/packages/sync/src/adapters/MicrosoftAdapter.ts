@@ -69,7 +69,9 @@ export class MicrosoftAdapter implements CalendarProvider {
   }
 
   private deltaSeedUrl(): string {
-    const base = this.calendarId ? `${BASE}/me/calendars/${this.calendarId}/calendarView/delta` : `${BASE}/me/calendarView/delta`;
+    const base = this.calendarId
+      ? `${BASE}/me/calendars/${this.calendarId}/calendarView/delta`
+      : `${BASE}/me/calendarView/delta`;
     const start = new Date(Date.now() - 365 * 24 * 3600 * 1000).toISOString();
     const end = new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString();
     return `${base}?startDateTime=${start}&endDateTime=${end}`;
@@ -81,9 +83,13 @@ export class MicrosoftAdapter implements CalendarProvider {
     let url: string | undefined = sinceToken ?? this.deltaSeedUrl();
     let deltaLink: string | undefined;
     while (url) {
-      const { data }: { data: GraphDeltaResponse } = await apiFetch<GraphDeltaResponse>(url, token, {
-        headers: { Prefer: 'odata.maxpagesize=100' },
-      });
+      const { data }: { data: GraphDeltaResponse } = await apiFetch<GraphDeltaResponse>(
+        url,
+        token,
+        {
+          headers: { Prefer: 'odata.maxpagesize=100' },
+        },
+      );
       for (const item of data.value ?? []) {
         if (item['@removed']) changes.push({ providerId: item.id, event: null });
         else changes.push({ providerId: item.id, event: fromGraph(item) });

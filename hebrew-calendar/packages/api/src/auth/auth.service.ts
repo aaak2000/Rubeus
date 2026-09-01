@@ -1,7 +1,7 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes } from 'node:crypto';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtPayload, LoginDto, RegisterDto } from './dto';
@@ -54,7 +54,8 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
     // Compare unconditionally so a missing account and a wrong password take
     // comparable time and cannot be distinguished by timing.
-    const hash = user?.passwordHash ?? '$2a$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidin';
+    const hash =
+      user?.passwordHash ?? '$2a$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidin';
     const ok = await bcrypt.compare(dto.password, hash);
     if (!user || !ok) throw new UnauthorizedException('Invalid credentials');
     return this.issueTokens(user.id, user.email, user.displayName);
@@ -81,7 +82,11 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token has expired');
     }
 
-    const tokens = await this.issueTokens(record.user.id, record.user.email, record.user.displayName);
+    const tokens = await this.issueTokens(
+      record.user.id,
+      record.user.email,
+      record.user.displayName,
+    );
     await this.prisma.refreshToken.update({
       where: { id: record.id },
       data: { revokedAt: new Date(), replacedById: hashToken(tokens.refreshToken) },
@@ -105,7 +110,11 @@ export class AuthService {
     });
   }
 
-  private async issueTokens(id: string, email: string, displayName: string | null): Promise<AuthTokens> {
+  private async issueTokens(
+    id: string,
+    email: string,
+    displayName: string | null,
+  ): Promise<AuthTokens> {
     const payload: JwtPayload = { sub: id, email };
     const accessToken = await this.jwt.signAsync(payload, {
       secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),

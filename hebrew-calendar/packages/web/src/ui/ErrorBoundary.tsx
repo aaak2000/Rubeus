@@ -29,7 +29,11 @@ export class ErrorBoundary extends Component<Props, State> {
       <div className="error-boundary" role="alert">
         <h1>משהו השתבש</h1>
         <p className="muted">אירעה שגיאה בלתי צפויה בממשק. אפשר לרענן את העמוד ולנסות שוב.</p>
-        <button className="btn btn-primary btn-md" onClick={() => window.location.reload()}>
+        <button
+          type="button"
+          className="btn btn-primary btn-md"
+          onClick={() => window.location.reload()}
+        >
           רענון העמוד
         </button>
       </div>

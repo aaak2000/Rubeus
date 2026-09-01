@@ -17,7 +17,13 @@ export class GregorianRecurrence {
    * The window itself bounds the result; `cap` is an extra safety ceiling
    * against pathological rules.
    */
-  occurrencesBetween(rrule: string, dtstart: Date, startIso: string, endIso: string, cap = 750): Date[] {
+  occurrencesBetween(
+    rrule: string,
+    dtstart: Date,
+    startIso: string,
+    endIso: string,
+    cap = 750,
+  ): Date[] {
     const options = RRule.parseString(rrule);
     options.dtstart = dtstart;
     const rule = new RRule(options);

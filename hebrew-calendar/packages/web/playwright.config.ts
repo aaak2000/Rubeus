@@ -29,7 +29,11 @@ export default defineConfig({
   projects: [
     {
       name: 'desktop',
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1360, height: 900 }, launchOptions: { executablePath } },
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1360, height: 900 },
+        launchOptions: { executablePath },
+      },
     },
     { name: 'mobile', use: { ...devices['Pixel 7'], launchOptions: { executablePath } } },
   ],

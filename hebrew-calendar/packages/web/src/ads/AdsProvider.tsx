@@ -1,14 +1,14 @@
+import { type GeoPoint, isRestTime } from '@hcal/core';
 import {
   createContext,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
-  type ReactNode,
 } from 'react';
-import { isRestTime, type GeoPoint } from '@hcal/core';
-import { api, type AdConfig } from '../api/client';
+import { type AdConfig, api } from '../api/client';
 
 export type ConsentChoice = 'accepted' | 'rejected' | null;
 
@@ -63,7 +63,10 @@ export function AdsProvider({ children }: { children: ReactNode }) {
   const [adFree, setAdFree] = useState(false);
 
   useEffect(() => {
-    api.adConfig().then(setConfig).catch(() => setConfig(null));
+    api
+      .adConfig()
+      .then(setConfig)
+      .catch(() => setConfig(null));
   }, []);
 
   // A subscription removes advertising. Checked once per session and again on

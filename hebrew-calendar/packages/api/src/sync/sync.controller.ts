@@ -1,10 +1,20 @@
-import { BadRequestException, Body, Controller, Get, Header, Param, Post, Query, UseGuards } from '@nestjs/common';
+import type { SyncDirection } from '@hcal/sync';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Header,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsString, MinLength } from 'class-validator';
-import type { SyncDirection } from '@hcal/sync';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthUser } from '../auth/dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SyncService } from './sync.service';
 
 // See the note in auth.controller: undecorated fields are stripped by the
@@ -43,7 +53,11 @@ export class SyncController {
   }
 
   @Post('import.ics')
-  importIcs(@CurrentUser() user: AuthUser, @Param('calendarId') calendarId: string, @Body() dto: ImportIcsDto) {
+  importIcs(
+    @CurrentUser() user: AuthUser,
+    @Param('calendarId') calendarId: string,
+    @Body() dto: ImportIcsDto,
+  ) {
     return this.sync.importIcs(user.userId, calendarId, dto.ics);
   }
 }

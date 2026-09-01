@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 /** Each spec registers its own account so runs never share state. */
 async function signUp(page: Page): Promise<string> {
@@ -67,7 +67,10 @@ test.describe('calendar', () => {
   test('opens the day drawer with Hebrew zmanim labels', async ({ page, isMobile }) => {
     await signUp(page);
     if (isMobile) {
-      await page.getByRole('radiogroup', { name: 'תצוגת יומן' }).getByRole('radio', { name: 'חודש' }).click();
+      await page
+        .getByRole('radiogroup', { name: 'תצוגת יומן' })
+        .getByRole('radio', { name: 'חודש' })
+        .click();
     }
     await page.locator('.day-cell:not(.is-outside)').nth(5).click();
     const drawer = page.locator('.day-drawer');
@@ -87,7 +90,10 @@ test.describe('calendar', () => {
 });
 
 test.describe('accessibility', () => {
-  test('the month grid is keyboard navigable and dialogs restore focus', async ({ page, isMobile }) => {
+  test('the month grid is keyboard navigable and dialogs restore focus', async ({
+    page,
+    isMobile,
+  }) => {
     await signUp(page);
     if (isMobile) test.skip(true, 'keyboard navigation targets the desktop grid');
 

@@ -4,7 +4,7 @@ import type { ReminderChannel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { YahrzeitsService, type YahrzeitView } from '../yahrzeits/yahrzeits.service';
 import { MailService } from './mail.service';
-import { PushService, type NotificationPayload } from './push.service';
+import { type NotificationPayload, PushService } from './push.service';
 import { UnsubscribeService } from './unsubscribe.service';
 
 /** One reminder that is due, with everything needed to deliver it. */
@@ -174,9 +174,7 @@ function buildPayload(r: DueReminder): NotificationPayload {
   const { view } = r;
   const when =
     r.daysBefore === 0 ? 'היום' : r.daysBefore === 1 ? 'מחר' : `בעוד ${r.daysBefore} ימים`;
-  const candle = view.next?.candleAt
-    ? ` הדלקת נר בערב שלפני, בשעה ${view.next.candleAt}.`
-    : '';
+  const candle = view.next?.candleAt ? ` הדלקת נר בערב שלפני, בשעה ${view.next.candleAt}.` : '';
   return {
     title: `אזכרה ${when}: ${view.name}`,
     body: `${view.hebrewDateText}.${candle}`,
@@ -189,6 +187,8 @@ function buildPayload(r: DueReminder): NotificationPayload {
 /** The hour of the clock in a timezone, 0-23. */
 function localHour(now: Date, tzid: string): number {
   return Number(
-    new Intl.DateTimeFormat('en-GB', { timeZone: tzid, hour: '2-digit', hour12: false }).format(now),
+    new Intl.DateTimeFormat('en-GB', { timeZone: tzid, hour: '2-digit', hour12: false }).format(
+      now,
+    ),
   );
 }

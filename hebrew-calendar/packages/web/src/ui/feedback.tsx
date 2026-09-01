@@ -1,7 +1,15 @@
 import type { ReactNode } from 'react';
 
 /** Placeholder blocks shown while content loads, sized like the real thing. */
-export function Skeleton({ width, height = 16, radius = 6 }: { width?: string | number; height?: number; radius?: number }) {
+export function Skeleton({
+  width,
+  height = 16,
+  radius = 6,
+}: {
+  width?: string | number;
+  height?: number;
+  radius?: number;
+}) {
   return (
     <span
       className="skeleton"

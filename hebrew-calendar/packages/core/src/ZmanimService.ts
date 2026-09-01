@@ -1,6 +1,6 @@
 import { GeoLocation, Zmanim } from '@hebcal/core';
+import { formatTimeInTz, fromIsoDate, isValidDate } from './dateUtils.js';
 import type { GeoPoint } from './types.js';
-import { fromIsoDate, formatTimeInTz, isValidDate } from './dateUtils.js';
 
 /** A set of halachic times for one day at one location, as HH:MM wall-clock. */
 export interface DailyZmanim {

@@ -1,8 +1,8 @@
 import type { TokenSource } from '@hcal/sync';
-import type { ProviderConnection } from '@prisma/client';
 import type { ConfigService } from '@nestjs/config';
-import type { PrismaService } from '../prisma/prisma.service';
+import type { ProviderConnection } from '@prisma/client';
 import type { TokenCrypto } from '../common/token-crypto';
+import type { PrismaService } from '../prisma/prisma.service';
 
 /**
  * A {@link TokenSource} for a stored provider connection that decrypts the
@@ -18,7 +18,8 @@ export class ConnectionTokenSource implements TokenSource {
   ) {}
 
   async getAccessToken(): Promise<string> {
-    const notExpired = !this.connection.expiresAt || this.connection.expiresAt.getTime() > Date.now() + 60_000;
+    const notExpired =
+      !this.connection.expiresAt || this.connection.expiresAt.getTime() > Date.now() + 60_000;
     if (notExpired) return this.crypto.decrypt(this.connection.accessTokenEnc);
     return this.refresh();
   }
@@ -35,15 +36,22 @@ export class ConnectionTokenSource implements TokenSource {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
     });
-    if (!res.ok) throw new Error(`Token refresh failed for ${this.connection.provider}: ${await res.text()}`);
-    const tokens = (await res.json()) as { access_token: string; expires_in?: number; refresh_token?: string };
+    if (!res.ok)
+      throw new Error(`Token refresh failed for ${this.connection.provider}: ${await res.text()}`);
+    const tokens = (await res.json()) as {
+      access_token: string;
+      expires_in?: number;
+      refresh_token?: string;
+    };
 
     const expiresAt = tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000) : null;
     this.connection = await this.prisma.providerConnection.update({
       where: { id: this.connection.id },
       data: {
         accessTokenEnc: this.crypto.encrypt(tokens.access_token),
-        refreshTokenEnc: tokens.refresh_token ? this.crypto.encrypt(tokens.refresh_token) : this.connection.refreshTokenEnc,
+        refreshTokenEnc: tokens.refresh_token
+          ? this.crypto.encrypt(tokens.refresh_token)
+          : this.connection.refreshTokenEnc,
         expiresAt,
       },
     });

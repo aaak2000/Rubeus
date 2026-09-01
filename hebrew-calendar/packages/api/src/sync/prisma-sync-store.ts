@@ -1,7 +1,6 @@
-import type { CanonicalEvent } from '@hcal/sync';
-import type { SyncMappingRecord, SyncStore } from '@hcal/sync';
-import type { PrismaService } from '../prisma/prisma.service';
+import type { CanonicalEvent, SyncMappingRecord, SyncStore } from '@hcal/sync';
 import { canonicalToEventData, eventToCanonical } from '../events/event.mapper';
+import type { PrismaService } from '../prisma/prisma.service';
 
 /** {@link SyncStore} implementation backed by Prisma for a single calendar. */
 export class PrismaSyncStore implements SyncStore {
@@ -40,7 +39,9 @@ export class PrismaSyncStore implements SyncStore {
 
   async saveMapping(record: SyncMappingRecord): Promise<void> {
     await this.prisma.syncMapping.upsert({
-      where: { calendarId_localEventId: { calendarId: this.calendarId, localEventId: record.localUid } },
+      where: {
+        calendarId_localEventId: { calendarId: this.calendarId, localEventId: record.localUid },
+      },
       create: {
         calendarId: this.calendarId,
         localEventId: record.localUid,
@@ -48,16 +49,24 @@ export class PrismaSyncStore implements SyncStore {
         etag: record.etag,
         lastSyncedHash: record.lastSyncedHash,
       },
-      update: { providerId: record.providerId, etag: record.etag, lastSyncedHash: record.lastSyncedHash },
+      update: {
+        providerId: record.providerId,
+        etag: record.etag,
+        lastSyncedHash: record.lastSyncedHash,
+      },
     });
   }
 
   async deleteMapping(localUid: string): Promise<void> {
-    await this.prisma.syncMapping.deleteMany({ where: { calendarId: this.calendarId, localEventId: localUid } });
+    await this.prisma.syncMapping.deleteMany({
+      where: { calendarId: this.calendarId, localEventId: localUid },
+    });
   }
 
   async getSyncToken(): Promise<string | undefined> {
-    const state = await this.prisma.syncState.findUnique({ where: { calendarId: this.calendarId } });
+    const state = await this.prisma.syncState.findUnique({
+      where: { calendarId: this.calendarId },
+    });
     return state?.token ?? undefined;
   }
 

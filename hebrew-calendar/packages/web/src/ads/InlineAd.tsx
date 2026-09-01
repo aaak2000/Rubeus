@@ -46,7 +46,12 @@ export function InlineAd({ label = 'מודעה' }: { label?: string }) {
     <aside className="ad-inline" aria-label={label}>
       <span className="ad-badge">{label}</span>
       {ad ? (
-        <a className="ad-inline-body" href={ad.targetUrl} target="_blank" rel="noopener noreferrer nofollow sponsored">
+        <a
+          className="ad-inline-body"
+          href={ad.targetUrl}
+          target="_blank"
+          rel="noopener noreferrer nofollow sponsored"
+        >
           {ad.imageUrl && <img className="ad-inline-image" src={ad.imageUrl} alt="" />}
           <span className="ad-inline-text">
             <span className="ad-inline-title">{ad.title}</span>

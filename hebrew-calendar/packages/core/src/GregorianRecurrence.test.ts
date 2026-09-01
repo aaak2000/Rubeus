@@ -9,7 +9,12 @@ describe('GregorianRecurrence', () => {
     const dtstart = new Date(Date.UTC(2024, 0, 3, 9, 0, 0));
     const occ = rec.occurrencesBetween('FREQ=WEEKLY;COUNT=6', dtstart, '2024-01-01', '2024-02-29');
     expect(occ.map(iso)).toEqual([
-      '2024-01-03', '2024-01-10', '2024-01-17', '2024-01-24', '2024-01-31', '2024-02-07',
+      '2024-01-03',
+      '2024-01-10',
+      '2024-01-17',
+      '2024-01-24',
+      '2024-01-31',
+      '2024-02-07',
     ]);
   });
 

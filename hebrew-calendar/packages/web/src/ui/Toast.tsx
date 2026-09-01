@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 export type ToastTone = 'info' | 'success' | 'error';
 
@@ -76,7 +84,12 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
   return (
     <div className={`toast toast-${toast.tone}`}>
       <span className="toast-message">{toast.message}</span>
-      <button type="button" className="toast-close" aria-label="סגירת ההודעה" onClick={() => onDismiss(toast.id)}>
+      <button
+        type="button"
+        className="toast-close"
+        aria-label="סגירת ההודעה"
+        onClick={() => onDismiss(toast.id)}
+      >
         ✕
       </button>
     </div>

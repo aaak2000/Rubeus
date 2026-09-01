@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AdPlacement, type AdCampaign } from '@prisma/client';
+import { type AdCampaign, AdPlacement } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 /** What the client needs to know to decide whether and how to show ads. */

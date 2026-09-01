@@ -1,6 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp, uniqueEmail } from './setup';
 
 let app: INestApplication;
@@ -76,7 +76,12 @@ describe('events', () => {
       end: '2024-06-21T23:30:00.000Z',
     }).expect(201);
     const list = await listEvents('2024-06-22T00:00:00Z', '2024-06-22T23:59:59Z').expect(200);
-    expect(list.body.some((e: { title: string; localDate: string }) => e.title === 'אירוע לילה' && e.localDate === '2024-06-22')).toBe(true);
+    expect(
+      list.body.some(
+        (e: { title: string; localDate: string }) =>
+          e.title === 'אירוע לילה' && e.localDate === '2024-06-22',
+      ),
+    ).toBe(true);
   });
 
   it('expands a weekly RRULE into concrete occurrences', async () => {
@@ -91,7 +96,10 @@ describe('events', () => {
     expect(occurrences).toHaveLength(4);
     expect(occurrences.every((e: { isOccurrence: boolean }) => e.isOccurrence)).toBe(true);
     expect(occurrences.map((e: { localDate: string }) => e.localDate)).toEqual([
-      '2024-01-03', '2024-01-10', '2024-01-17', '2024-01-24',
+      '2024-01-03',
+      '2024-01-10',
+      '2024-01-17',
+      '2024-01-24',
     ]);
   });
 
@@ -141,7 +149,7 @@ describe('events', () => {
     await listEvents('2024-06-10T00:00:00Z', '2024-06-01T00:00:00Z').expect(400);
   });
 
-  it('refuses access to another user\'s calendar', async () => {
+  it("refuses access to another user's calendar", async () => {
     const other = await server()
       .post('/api/auth/register')
       .send({ email: uniqueEmail('intruder'), password: 'password123' })
@@ -172,7 +180,9 @@ describe('ICS import and export', () => {
   // The second regression this suite exists for: ImportIcsDto.ics carried no
   // validation decorator, so whitelist:true stripped it and import crashed.
   it('imports events from an ICS document', async () => {
-    const res = await authPost(`/api/calendars/${calendarId}/import.ics`).send({ ics: ICS }).expect(201);
+    const res = await authPost(`/api/calendars/${calendarId}/import.ics`)
+      .send({ ics: ICS })
+      .expect(201);
     expect(res.body.imported).toBe(1);
     const list = await listEvents('2024-06-01T00:00:00Z', '2024-06-02T00:00:00Z').expect(200);
     expect(list.body.some((e: { title: string }) => e.title === 'אירוע מיובא')).toBe(true);

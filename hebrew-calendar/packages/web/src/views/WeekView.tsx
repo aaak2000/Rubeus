@@ -20,7 +20,15 @@ interface Props extends ViewProps {
  * late, so evening events sit in the header band with their real time and date
  * instead, alongside all-day entries and holidays.
  */
-export function WeekView({ days, eventsByDate, selected, onSelect, onCreate, onOpenEvent, tzid }: Props) {
+export function WeekView({
+  days,
+  eventsByDate,
+  selected,
+  onSelect,
+  onCreate,
+  onOpenEvent,
+  tzid,
+}: Props) {
   function minutesFromStart(iso: string): number {
     const [h, m] = zonedTimeKey(new Date(iso), tzid).split(':').map(Number);
     return (h! - START_HOUR) * 60 + m!;
@@ -52,8 +60,8 @@ export function WeekView({ days, eventsByDate, selected, onSelect, onCreate, onO
             <span className="week-day-chips">
               {sortedHolidays(day)
                 .slice(0, 2)
-                .map((h, i) => (
-                  <span key={i} className="chip chip-holiday" title={h.titleHe}>
+                .map((h) => (
+                  <span key={h.titleHe} className="chip chip-holiday" title={h.titleHe}>
                     {h.titleHe}
                   </span>
                 ))}

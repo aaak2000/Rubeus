@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 async function signUp(page: Page): Promise<void> {
   const email = `ads-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;

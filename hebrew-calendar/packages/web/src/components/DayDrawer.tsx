@@ -1,9 +1,17 @@
+import { type GeoPoint, zonedTimeKey } from '@hcal/core';
 import { useMemo } from 'react';
-import { zonedTimeKey, type GeoPoint } from '@hcal/core';
-import type { EventInstance } from '../api/client';
-import { GREGORIAN_MONTHS_HE, HEBREW_WEEKDAYS, ZMAN_LABELS, ZMAN_ORDER, hebrewYearText, zmanimFor, type GridDay } from '../hebrew';
-import { Button, EmptyState } from '../ui';
 import { InlineAd } from '../ads';
+import type { EventInstance } from '../api/client';
+import {
+  GREGORIAN_MONTHS_HE,
+  type GridDay,
+  HEBREW_WEEKDAYS,
+  hebrewYearText,
+  ZMAN_LABELS,
+  ZMAN_ORDER,
+  zmanimFor,
+} from '../hebrew';
+import { Button, EmptyState } from '../ui';
 
 interface Props {
   day: GridDay;
@@ -46,8 +54,8 @@ export function DayDrawer({ day, events, geo, tzid, onClose, onCreate, onOpenEve
         <section className="drawer-section">
           <h3 className="drawer-title">מועדי היום</h3>
           <ul className="drawer-holidays">
-            {day.holidays.map((h, i) => (
-              <li key={i}>
+            {day.holidays.map((h) => (
+              <li key={h.titleHe}>
                 <span className="holiday-dot" aria-hidden="true" />
                 <span>
                   {h.emoji ? `${h.emoji} ` : ''}
@@ -80,12 +88,15 @@ export function DayDrawer({ day, events, geo, tzid, onClose, onCreate, onOpenEve
                     ) : (
                       <>
                         {e.isEvening && <span className="eve-mark">ליל</span>}
-                        {zonedTimeKey(new Date(e.start), tzid)}–{zonedTimeKey(new Date(e.end), tzid)}
+                        {zonedTimeKey(new Date(e.start), tzid)}–
+                        {zonedTimeKey(new Date(e.end), tzid)}
                       </>
                     )}
                   </span>
                   <span className="drawer-event-title">{e.title}</span>
-                  {e.location && <span className="drawer-event-loc muted text-xs">{e.location}</span>}
+                  {e.location && (
+                    <span className="drawer-event-loc muted text-xs">{e.location}</span>
+                  )}
                 </button>
               </li>
             ))}

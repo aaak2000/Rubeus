@@ -42,7 +42,10 @@ describe('token refresh', () => {
         }
         currentRefresh = `refresh-${refreshCalls + 1}`;
         return new Response(
-          JSON.stringify({ accessToken: `access-${refreshCalls + 1}`, refreshToken: currentRefresh }),
+          JSON.stringify({
+            accessToken: `access-${refreshCalls + 1}`,
+            refreshToken: currentRefresh,
+          }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }

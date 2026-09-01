@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, ApiError, type BillingStatus } from '../api/client';
-import { Button, Skeleton, useToast } from '../ui';
 import { useAds } from '../ads';
+import { ApiError, api, type BillingStatus } from '../api/client';
+import { Button, Skeleton, useToast } from '../ui';
 
 declare global {
   interface Window {
@@ -127,9 +127,7 @@ export function SubscriptionSection() {
           >
             הסרת הפרסומות
           </Button>
-          {!status.checkoutAvailable && (
-            <p className="notice">התשלום אינו מוגדר בשרת הזה עדיין.</p>
-          )}
+          {!status.checkoutAvailable && <p className="notice">התשלום אינו מוגדר בשרת הזה עדיין.</p>}
         </>
       )}
     </section>

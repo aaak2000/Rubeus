@@ -1,11 +1,11 @@
 import {
+  type CalendarItem,
+  type GeoPoint,
   gematriya,
   hebrewDateService,
   holidayService,
   zmanimService,
   zonedDateKey,
-  type CalendarItem,
-  type GeoPoint,
 } from '@hcal/core';
 
 /** Hebrew month names, indexed by hebcal's month numbers (1 = Nisan). */
@@ -45,8 +45,18 @@ export const HEBREW_WEEKDAYS = ['ראשון', 'שני', 'שלישי', 'רביע�
 export const HEBREW_WEEKDAYS_SHORT = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
 
 export const GREGORIAN_MONTHS_HE = [
-  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+  'ינואר',
+  'פברואר',
+  'מרץ',
+  'אפריל',
+  'מאי',
+  'יוני',
+  'יולי',
+  'אוגוסט',
+  'ספטמבר',
+  'אוקטובר',
+  'נובמבר',
+  'דצמבר',
 ];
 
 /**
@@ -121,8 +131,17 @@ function withGematriyaYear(title: string): string {
 }
 
 /** Holidays for a window, grouped by ISO date. One core call for the range. */
-function holidaysByDate(startIso: string, endIso: string, il: boolean): Map<string, CalendarItem[]> {
-  const items = holidayService.between(startIso, endIso, { il, locale: 'he', sedrot: true, omer: true });
+function holidaysByDate(
+  startIso: string,
+  endIso: string,
+  il: boolean,
+): Map<string, CalendarItem[]> {
+  const items = holidayService.between(startIso, endIso, {
+    il,
+    locale: 'he',
+    sedrot: true,
+    omer: true,
+  });
   const map = new Map<string, CalendarItem[]>();
   for (const item of items) {
     const arr = map.get(item.date) ?? [];
@@ -137,7 +156,12 @@ function hasYomTov(items: CalendarItem[]): boolean {
   return items.some((i) => i.categories.includes('holiday') && i.categories.includes('major'));
 }
 
-function buildDays(dates: Date[], monthFilter: number | null, il: boolean, tzid: string): GridDay[] {
+function buildDays(
+  dates: Date[],
+  monthFilter: number | null,
+  il: boolean,
+  tzid: string,
+): GridDay[] {
   if (dates.length === 0) return [];
   const byDate = holidaysByDate(isoOf(dates[0]!), isoOf(dates[dates.length - 1]!), il);
   const todayIso = zonedDateKey(new Date(), tzid);
@@ -187,9 +211,15 @@ export function buildRange(startIso: string, days: number, il: boolean, tzid: st
 }
 
 /** The Gregorian span a Hebrew month covers, for the Hebrew year view. */
-export function hebrewMonthSpan(hebrewYear: number, hebrewMonth: number): { startIso: string; days: number } {
+export function hebrewMonthSpan(
+  hebrewYear: number,
+  hebrewMonth: number,
+): { startIso: string; days: number } {
   const start = hebrewDateService.fromHebrew(hebrewYear, hebrewMonth, 1);
-  return { startIso: start.gregorian, days: hebrewDateService.daysInMonth(hebrewMonth, hebrewYear) };
+  return {
+    startIso: start.gregorian,
+    days: hebrewDateService.daysInMonth(hebrewMonth, hebrewYear),
+  };
 }
 
 /**

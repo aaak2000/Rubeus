@@ -235,7 +235,10 @@ export interface Profile {
 
 export const api = {
   register: (email: string, password: string, displayName?: string) =>
-    raw<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, displayName }) }),
+    raw<AuthResponse>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, displayName }),
+    }),
   login: (email: string, password: string) =>
     raw<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
 
@@ -246,16 +249,26 @@ export const api = {
   calendars: () => raw<Calendar[]>('/calendars', { method: 'GET' }),
 
   events: (calendarId: string, start: string, end: string) =>
-    raw<EventInstance[]>(`/calendars/${calendarId}/events?start=${start}&end=${end}`, { method: 'GET' }),
+    raw<EventInstance[]>(`/calendars/${calendarId}/events?start=${start}&end=${end}`, {
+      method: 'GET',
+    }),
   createEvent: (calendarId: string, body: Record<string, unknown>) =>
-    raw<EventInstance>(`/calendars/${calendarId}/events`, { method: 'POST', body: JSON.stringify(body) }),
+    raw<EventInstance>(`/calendars/${calendarId}/events`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   updateEvent: (calendarId: string, id: string, body: Record<string, unknown>) =>
-    raw<EventInstance>(`/calendars/${calendarId}/events/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    raw<EventInstance>(`/calendars/${calendarId}/events/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
   deleteEvent: (calendarId: string, id: string) =>
     raw(`/calendars/${calendarId}/events/${id}`, { method: 'DELETE' }),
 
   holidays: (year: number, month: number, il: boolean) =>
-    raw<CalendarItem[]>(`/hebrew/holidays?year=${year}&month=${month}&il=${il}&locale=he`, { method: 'GET' }),
+    raw<CalendarItem[]>(`/hebrew/holidays?year=${year}&month=${month}&il=${il}&locale=he`, {
+      method: 'GET',
+    }),
   zmanim: (date: string, lat: number, lon: number, tzid: string) =>
     raw<{ times: Record<string, string | null> }>(
       `/hebrew/zmanim?date=${date}&lat=${lat}&lon=${lon}&tzid=${encodeURIComponent(tzid)}`,
@@ -264,13 +277,15 @@ export const api = {
 
   googleUrl: () => raw<{ url: string }>('/oauth/google/url', { method: 'GET' }),
   microsoftUrl: () => raw<{ url: string }>('/oauth/microsoft/url', { method: 'GET' }),
-  sync: (calendarId: string) => raw<SyncResult>(`/calendars/${calendarId}/sync`, { method: 'POST' }),
+  sync: (calendarId: string) =>
+    raw<SyncResult>(`/calendars/${calendarId}/sync`, { method: 'POST' }),
   yahrzeits: () => raw<Yahrzeit[]>('/yahrzeits', { method: 'GET' }),
   createYahrzeit: (body: YahrzeitInput) =>
     raw<Yahrzeit>('/yahrzeits', { method: 'POST', body: JSON.stringify(body) }),
   updateYahrzeit: (id: string, body: Partial<YahrzeitInput>) =>
     raw<Yahrzeit>(`/yahrzeits/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-  deleteYahrzeit: (id: string) => raw<{ deleted: boolean }>(`/yahrzeits/${id}`, { method: 'DELETE' }),
+  deleteYahrzeit: (id: string) =>
+    raw<{ deleted: boolean }>(`/yahrzeits/${id}`, { method: 'DELETE' }),
   deleteAccount: () => raw<{ deleted: boolean }>('/me', { method: 'DELETE' }),
   unsubscribeEmail: (token: string) =>
     raw<UnsubscribeResult>(`/notifications/unsubscribe?token=${encodeURIComponent(token)}`, {
@@ -280,7 +295,10 @@ export const api = {
   checkoutInfo: () => raw<CheckoutInfo>('/billing/checkout', { method: 'GET' }),
   notificationConfig: () => raw<NotificationConfig>('/notifications/config', { method: 'GET' }),
   subscribePush: (sub: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
-    raw<{ subscribed: boolean }>('/notifications/push', { method: 'POST', body: JSON.stringify(sub) }),
+    raw<{ subscribed: boolean }>('/notifications/push', {
+      method: 'POST',
+      body: JSON.stringify(sub),
+    }),
   unsubscribePush: (endpoint: string) =>
     raw<{ unsubscribed: boolean }>('/notifications/push', {
       method: 'DELETE',
@@ -292,7 +310,10 @@ export const api = {
   adClick: (id: string) => raw<{ targetUrl: string }>(`/ads/${id}/click`, { method: 'POST' }),
 
   importIcs: (calendarId: string, ics: string) =>
-    raw<{ imported: number }>(`/calendars/${calendarId}/import.ics`, { method: 'POST', body: JSON.stringify({ ics }) }),
+    raw<{ imported: number }>(`/calendars/${calendarId}/import.ics`, {
+      method: 'POST',
+      body: JSON.stringify({ ics }),
+    }),
 };
 
 export function icsExportUrl(calendarId: string): string {

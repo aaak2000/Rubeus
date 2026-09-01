@@ -1,20 +1,21 @@
-import { Navigate, Route, Routes, Link, useLocation } from 'react-router-dom';
-import { useAuth } from './auth/AuthContext';
-import { LoginPage } from './pages/LoginPage';
-import { CalendarPage } from './pages/CalendarPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { RemindersPage } from './pages/RemindersPage';
-import { UnsubscribePage } from './pages/UnsubscribePage';
-import { AccessibilityPage } from './pages/AccessibilityPage';
-import { Button, Skeleton, ThemeToggle } from './ui';
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ConsentBanner, InterstitialAd, useInterstitial } from './ads';
+import { useAuth } from './auth/AuthContext';
+import { AccessibilityPage } from './pages/AccessibilityPage';
+import { CalendarPage } from './pages/CalendarPage';
+import { LoginPage } from './pages/LoginPage';
+import { RemindersPage } from './pages/RemindersPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { UnsubscribePage } from './pages/UnsubscribePage';
+import { Button, Skeleton, ThemeToggle } from './ui';
 
 function Shell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const loc = useLocation();
   // An ad must never land on top of work in progress, so any open dialog
   // suppresses it entirely.
-  const dialogOpen = typeof document !== 'undefined' && document.querySelector('[role="dialog"]') !== null;
+  const dialogOpen =
+    typeof document !== 'undefined' && document.querySelector('[role="dialog"]') !== null;
   const { ad, dismiss } = useInterstitial(dialogOpen);
   const nav = [
     { to: '/', label: 'יומן' },
@@ -55,7 +56,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) {
     return (
-      <div className="boot-loading" aria-busy="true" aria-label="טוען">
+      <div className="boot-loading" role="status" aria-busy="true" aria-label="טוען">
         <Skeleton height={44} />
         <Skeleton height={320} />
       </div>

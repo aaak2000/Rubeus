@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 /**
  * Where an evening event is drawn.
@@ -42,7 +42,10 @@ async function createTimed(page: Page, title: string, start: string, end: string
 }
 
 test.describe('evening events', () => {
-  test('the form says which civil evening a post-sunset time lands on', async ({ page, isMobile }) => {
+  test('the form says which civil evening a post-sunset time lands on', async ({
+    page,
+    isMobile,
+  }) => {
     test.skip(isMobile, 'drives the month grid, which is not the mobile default');
     await signUp(page);
     await setJerusalem(page);
@@ -63,7 +66,10 @@ test.describe('evening events', () => {
     await expect(page.locator('.day-hint')).toContainText('לאחר השקיעה');
   });
 
-  test('an evening event is marked, and never drawn on the hour axis', async ({ page, isMobile }) => {
+  test('an evening event is marked, and never drawn on the hour axis', async ({
+    page,
+    isMobile,
+  }) => {
     test.skip(isMobile, 'drives the month grid, which is not the mobile default');
     await signUp(page);
     await setJerusalem(page);
@@ -81,7 +87,10 @@ test.describe('evening events', () => {
 
     // Week view: it belongs in the header band, not the hour axis. Drawn on the
     // axis it would sit at the 21:00 slot of a day it does not happen on.
-    await page.getByRole('radiogroup', { name: 'תצוגת יומן' }).getByRole('radio', { name: 'שבוע' }).click();
+    await page
+      .getByRole('radiogroup', { name: 'תצוגת יומן' })
+      .getByRole('radio', { name: 'שבוע' })
+      .click();
     await expect(page.locator('.week-view')).toBeVisible();
     await expect(page.locator('.week-event', { hasText: 'סעודת ליל שבת' })).toHaveCount(0);
     await expect(
@@ -100,7 +109,10 @@ test.describe('evening events', () => {
     await today.locator('.day-add').click();
     await createTimed(page, 'שיעור בוקר', '09:00', '10:00');
 
-    await page.getByRole('radiogroup', { name: 'תצוגת יומן' }).getByRole('radio', { name: 'שבוע' }).click();
+    await page
+      .getByRole('radiogroup', { name: 'תצוגת יומן' })
+      .getByRole('radio', { name: 'שבוע' })
+      .click();
     const event = page.locator('.week-event', { hasText: 'שיעור בוקר' });
     await expect(event).toBeVisible();
     // 09:00 against an axis starting at 06:00 — three slots down, not at the top.

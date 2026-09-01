@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, ApiError, type Yahrzeit } from '../api/client';
-import { Button, EmptyState, Skeleton, useToast } from '../ui';
+import { ApiError, api, type Yahrzeit } from '../api/client';
 import { YahrzeitModal } from '../components/YahrzeitModal';
 import { GREGORIAN_MONTHS_HE } from '../hebrew';
+import { Button, EmptyState, Skeleton, useToast } from '../ui';
 
 /**
  * The memorial register.
@@ -49,7 +49,7 @@ export function RemindersPage() {
       </header>
 
       {rows === null ? (
-        <div className="stack" aria-busy="true" aria-label="טוען">
+        <div className="stack" role="status" aria-busy="true" aria-label="טוען">
           <Skeleton height={92} />
           <Skeleton height={92} />
           <Skeleton height={92} />
@@ -73,11 +73,7 @@ export function RemindersPage() {
       )}
 
       {(creating || editing) && (
-        <YahrzeitModal
-          yahrzeit={editing ?? undefined}
-          onClose={afterSave}
-          onSaved={afterSave}
-        />
+        <YahrzeitModal yahrzeit={editing ?? undefined} onClose={afterSave} onSaved={afterSave} />
       )}
     </div>
   );
@@ -87,7 +83,7 @@ function YahrzeitRow({ y, onEdit }: { y: Yahrzeit; onEdit: () => void }) {
   const soon = y.next !== null && y.next.daysUntil <= 30;
   return (
     <li className={`yz-card${soon ? ' soon' : ''}`}>
-      <button className="yz-main" onClick={onEdit} aria-label={`עריכת ${y.name}`}>
+      <button type="button" className="yz-main" onClick={onEdit} aria-label={`עריכת ${y.name}`}>
         <div className="yz-head">
           <span className="yz-name">{y.name}</span>
           {y.relation && <span className="yz-rel">{y.relation}</span>}
@@ -99,7 +95,9 @@ function YahrzeitRow({ y, onEdit }: { y: Yahrzeit; onEdit: () => void }) {
       <div className="yz-next">
         {y.next ? (
           <>
-            <span className={`yz-countdown${soon ? ' soon' : ''}`}>{countdown(y.next.daysUntil)}</span>
+            <span className={`yz-countdown${soon ? ' soon' : ''}`}>
+              {countdown(y.next.daysUntil)}
+            </span>
             <span className="yz-when">
               {y.next.hebrewText} · {formatGregorian(y.next.gregorian)}
             </span>

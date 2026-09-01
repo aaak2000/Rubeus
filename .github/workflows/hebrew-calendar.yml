@@ -65,6 +65,12 @@ jobs:
       - name: Apply database migrations
         run: pnpm --filter @hcal/api exec prisma migrate deploy
 
+      - name: Lint and format check
+        run: pnpm exec biome ci .
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
       - name: Build all packages
         run: pnpm -r build
 

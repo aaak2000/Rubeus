@@ -1,7 +1,7 @@
-import { flags, HebrewCalendar, HDate } from '@hebcal/core';
-import type { GeoPoint } from './types.js';
+import { flags, HDate, HebrewCalendar } from '@hebcal/core';
 import { fromIsoDate } from './dateUtils.js';
 import { zonedDateKey } from './timezone.js';
+import type { GeoPoint } from './types.js';
 import { zmanimService } from './ZmanimService.js';
 
 /** Why a moment counts as rest time, for display and for logging. */
@@ -87,6 +87,10 @@ export function restWindowAt(
 }
 
 /** Convenience wrapper: is it Shabbat or yom tov right now? */
-export function isRestTime(location: GeoPoint | null | undefined, il = false, now: Date = new Date()): boolean {
+export function isRestTime(
+  location: GeoPoint | null | undefined,
+  il = false,
+  now: Date = new Date(),
+): boolean {
   return restWindowAt(now, location, il).isRest;
 }

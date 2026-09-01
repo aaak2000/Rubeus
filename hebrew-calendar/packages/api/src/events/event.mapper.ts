@@ -1,5 +1,5 @@
-import type { Event as DbEvent } from '@prisma/client';
 import type { CanonicalEvent } from '@hcal/sync';
+import type { Event as DbEvent } from '@prisma/client';
 
 /**
  * Map a stored event to the provider-neutral shape used for sync.

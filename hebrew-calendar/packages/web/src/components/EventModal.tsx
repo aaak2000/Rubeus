@@ -1,16 +1,16 @@
-import { useMemo, useState, type FormEvent } from 'react';
 import {
   eveningOf,
+  type GeoPoint,
   hebrewDateService,
   zmanimService,
   zonedDateKey,
   zonedDateTimeToUtc,
   zonedTimeKey,
-  type GeoPoint,
 } from '@hcal/core';
-import { api, ApiError, type EventInstance } from '../api/client';
-import { Button, ConfirmDialog, Modal, Switch, useToast } from '../ui';
+import { type FormEvent, useMemo, useState } from 'react';
+import { ApiError, api, type EventInstance } from '../api/client';
 import { hebrewDayText, hebrewMonthName } from '../hebrew';
+import { Button, ConfirmDialog, Modal, Switch, useToast } from '../ui';
 
 interface Props {
   calendarId: string;
@@ -43,7 +43,9 @@ export function EventModal({ calendarId, dateIso, event, tzid, geo, onClose, onS
 
   const [title, setTitle] = useState(event?.title ?? '');
   const [allDay, setAllDay] = useState(event?.allDay ?? true);
-  const [startTime, setStartTime] = useState(event ? zonedTimeKey(new Date(event.start), tzid) : '09:00');
+  const [startTime, setStartTime] = useState(
+    event ? zonedTimeKey(new Date(event.start), tzid) : '09:00',
+  );
   const [endTime, setEndTime] = useState(event ? zonedTimeKey(new Date(event.end), tzid) : '10:00');
   const [location, setLocation] = useState(event?.location ?? '');
   const [hebrewRecurrence, setHebrewRecurrence] = useState(event?.hebrewRecurrence ?? '');
@@ -182,7 +184,11 @@ export function EventModal({ calendarId, dateIso, event, tzid, geo, onClose, onS
             <div className="grid2">
               <label className="field">
                 <span className="field-label">שעת התחלה</span>
-                <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
               </label>
               <label className="field">
                 <span className="field-label">שעת סיום</span>
@@ -211,7 +217,11 @@ export function EventModal({ calendarId, dateIso, event, tzid, geo, onClose, onS
 
         <label className="field">
           <span className="field-label">מיקום</span>
-          <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="לא חובה" />
+          <input
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="לא חובה"
+          />
         </label>
 
         <label className="field">

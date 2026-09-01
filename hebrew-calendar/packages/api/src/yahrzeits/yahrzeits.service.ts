@@ -1,14 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import type { Yahrzeit } from '@prisma/client';
 import {
+  type GeoPoint,
   gematriya,
   hebrewDateOfDeath,
   hebrewDateService,
   hebrewRecurrence,
   zmanimService,
   zonedDateKey,
-  type GeoPoint,
 } from '@hcal/core';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import type { Yahrzeit } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CreateYahrzeitDto, UpdateYahrzeitDto } from './dto';
 
@@ -55,7 +55,13 @@ export class YahrzeitsService {
     const tzid = s?.tzid || 'Asia/Jerusalem';
     const location =
       s && s.latitude !== null && s.longitude !== null
-        ? { latitude: s.latitude, longitude: s.longitude, tzid, elevation: s.elevation ?? 0, il: s.il }
+        ? {
+            latitude: s.latitude,
+            longitude: s.longitude,
+            tzid,
+            elevation: s.elevation ?? 0,
+            il: s.il,
+          }
         : null;
     return { tzid, location };
   }
@@ -106,7 +112,9 @@ export class YahrzeitsService {
         name: dto.name,
         hebrewName: dto.hebrewName,
         relation: dto.relation,
-        deathDate: dto.deathDate ? new Date(`${dto.deathDate.slice(0, 10)}T00:00:00.000Z`) : undefined,
+        deathDate: dto.deathDate
+          ? new Date(`${dto.deathDate.slice(0, 10)}T00:00:00.000Z`)
+          : undefined,
         afterSunset: dto.afterSunset,
         note: dto.note,
         ...(dto.remindDaysBefore ? { remindDaysBefore: dedupe(dto.remindDaysBefore) } : {}),

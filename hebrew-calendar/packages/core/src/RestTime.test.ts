@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { restWindowAt, isRestTime } from './RestTime.js';
+import { isRestTime, restWindowAt } from './RestTime.js';
 import type { GeoPoint } from './types.js';
 
 const JLM: GeoPoint = {

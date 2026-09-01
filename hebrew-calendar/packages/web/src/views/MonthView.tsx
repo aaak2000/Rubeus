@@ -11,7 +11,18 @@ const MAX_CHIPS = 3;
  * Exposed as an ARIA grid so assistive technology announces it as a table of
  * days, and arrow keys move between cells the way a calendar is expected to.
  */
-export function MonthView({ days, eventsByDate, selected, onSelect, onCreate, onOpenEvent, loading }: ViewProps) {
+/** Stable ids for the loading placeholders — six weeks of seven days. */
+const SKELETON_CELLS = Array.from({ length: 42 }, (_, i) => `skeleton-${i}`);
+
+export function MonthView({
+  days,
+  eventsByDate,
+  selected,
+  onSelect,
+  onCreate,
+  onOpenEvent,
+  loading,
+}: ViewProps) {
   const gridRef = useRef<HTMLDivElement>(null);
 
   function onKeyDown(e: React.KeyboardEvent, index: number) {
@@ -43,8 +54,8 @@ export function MonthView({ days, eventsByDate, selected, onSelect, onCreate, on
   if (loading) {
     return (
       <div className="month-skeleton" aria-hidden="true">
-        {Array.from({ length: 42 }, (_, i) => (
-          <Skeleton key={i} height={96} radius={10} />
+        {SKELETON_CELLS.map((id) => (
+          <Skeleton key={id} height={96} radius={10} />
         ))}
       </div>
     );
@@ -65,7 +76,10 @@ export function MonthView({ days, eventsByDate, selected, onSelect, onCreate, on
         {days.map((day, i) => {
           const events = eventsByDate.get(day.iso) ?? [];
           const chips = sortedHolidays(day);
-          const shown = [...chips.map((h) => ({ kind: 'holiday' as const, item: h })), ...events.map((e) => ({ kind: 'event' as const, item: e }))];
+          const shown = [
+            ...chips.map((h) => ({ kind: 'holiday' as const, item: h })),
+            ...events.map((e) => ({ kind: 'event' as const, item: e })),
+          ];
           const visible = shown.slice(0, MAX_CHIPS);
           const overflow = shown.length - visible.length;
           const isSelected = selected === day.iso;
@@ -98,10 +112,10 @@ export function MonthView({ days, eventsByDate, selected, onSelect, onCreate, on
               </div>
 
               <div className="day-chips">
-                {visible.map((entry, idx) =>
+                {visible.map((entry) =>
                   entry.kind === 'holiday' ? (
                     <span
-                      key={`h${idx}`}
+                      key={entry.item.titleHe}
                       className={`chip chip-holiday${entry.item.categories.includes('parashat') ? ' is-parasha' : ''}`}
                       title={entry.item.titleHe}
                     >

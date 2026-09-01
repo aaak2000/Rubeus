@@ -1,10 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import request from 'supertest';
 import { createHmac } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
-import { createTestApp, uniqueEmail } from './setup';
+import request from 'supertest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BillingService } from '../src/billing/billing.service';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { createTestApp, uniqueEmail } from './setup';
 
 let app: INestApplication;
 let token: string;
@@ -94,8 +94,10 @@ describe('paddle webhook', () => {
     const event = subscriptionEvent();
     const { header } = signed(event);
     // Same signature, different bytes.
-    await postWebhook(JSON.stringify({ ...event, event_type: 'subscription.canceled' }), header)
-      .expect(401);
+    await postWebhook(
+      JSON.stringify({ ...event, event_type: 'subscription.canceled' }),
+      header,
+    ).expect(401);
   });
 
   it('rejects a replayed signature from an hour ago', async () => {

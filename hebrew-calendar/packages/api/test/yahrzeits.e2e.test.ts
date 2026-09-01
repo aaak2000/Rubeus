@@ -1,6 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp, uniqueEmail } from './setup';
 
 let app: INestApplication;
@@ -93,8 +93,12 @@ describe('yahrzeit register', () => {
   });
 
   it('rejects an absurd reminder offset rather than scheduling it', async () => {
-    await patch(`/api/yahrzeits/${id}`).send({ remindDaysBefore: [4000] }).expect(400);
-    await patch(`/api/yahrzeits/${id}`).send({ remindDaysBefore: [1, 2, 3, 4, 5, 6, 7] }).expect(400);
+    await patch(`/api/yahrzeits/${id}`)
+      .send({ remindDaysBefore: [4000] })
+      .expect(400);
+    await patch(`/api/yahrzeits/${id}`)
+      .send({ remindDaysBefore: [1, 2, 3, 4, 5, 6, 7] })
+      .expect(400);
   });
 
   it('rejects a malformed date of death', async () => {
@@ -107,11 +111,13 @@ describe('yahrzeit register', () => {
 
   it('lists soonest first', async () => {
     const res = await get('/api/yahrzeits').expect(200);
-    const days = res.body.filter((r: { next: unknown }) => r.next).map((r: any) => r.next.daysUntil);
+    const days = res.body
+      .filter((r: { next: unknown }) => r.next)
+      .map((r: { next: { daysUntil: number } }) => r.next.daysUntil);
     expect(days).toEqual([...days].sort((a: number, b: number) => a - b));
   });
 
-  it('hides another user\'s records, and refuses to edit them', async () => {
+  it("hides another user's records, and refuses to edit them", async () => {
     const other = await request(app.getHttpServer())
       .post('/api/auth/register')
       .send({ email: uniqueEmail('yz-other'), password: 'password123' })

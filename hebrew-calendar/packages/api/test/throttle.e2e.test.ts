@@ -1,6 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 // The auth limit is read when the controller class is defined, so it has to be
 // set before the module graph is imported. Other suites raise it to stay out of
@@ -21,7 +21,9 @@ describe('brute-force protection', () => {
   it('rejects credential attempts beyond the configured limit', async () => {
     const server = () => request(app.getHttpServer());
     const attempt = () =>
-      server().post('/api/auth/login').send({ email: 'nobody@example.test', password: 'wrong-password' });
+      server()
+        .post('/api/auth/login')
+        .send({ email: 'nobody@example.test', password: 'wrong-password' });
 
     const statuses: number[] = [];
     for (let i = 0; i < 5; i++) statuses.push((await attempt()).status);

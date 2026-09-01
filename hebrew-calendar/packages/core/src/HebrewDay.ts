@@ -1,7 +1,7 @@
 import { HDate } from '@hebcal/core';
-import type { GeoPoint } from './types.js';
 import { fromIsoDate, toIsoDate } from './dateUtils.js';
 import { zonedDateKey, zonedDateTimeToUtc } from './timezone.js';
+import type { GeoPoint } from './types.js';
 import { zmanimService } from './ZmanimService.js';
 
 /**
@@ -74,12 +74,20 @@ export function hebrewDayBounds(
 ): HebrewDayBounds {
   const midnight = (iso: string) => zonedDateTimeToUtc(iso, '00:00', tzid);
   if (!location) {
-    return { start: midnight(gregorianIso), end: midnight(nextDay(gregorianIso)), fromSunset: false };
+    return {
+      start: midnight(gregorianIso),
+      end: midnight(nextDay(gregorianIso)),
+      fromSunset: false,
+    };
   }
   const start = zmanimService.sunsetInstant(previousDay(gregorianIso), location);
   const end = zmanimService.sunsetInstant(gregorianIso, location);
   if (!start || !end) {
-    return { start: midnight(gregorianIso), end: midnight(nextDay(gregorianIso)), fromSunset: false };
+    return {
+      start: midnight(gregorianIso),
+      end: midnight(nextDay(gregorianIso)),
+      fromSunset: false,
+    };
   }
   return { start, end, fromSunset: true };
 }

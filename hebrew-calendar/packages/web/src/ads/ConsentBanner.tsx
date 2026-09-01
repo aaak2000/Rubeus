@@ -21,7 +21,7 @@ export function ConsentBanner() {
   if (consent !== null || !adsEnabled || resting || adFree) return null;
 
   return (
-    <div className="consent" role="region" aria-labelledby="consent-title">
+    <section className="consent" aria-labelledby="consent-title">
       <div className="consent-inner">
         <div>
           <h2 id="consent-title" className="consent-title">
@@ -29,7 +29,8 @@ export function ConsentBanner() {
           </h2>
           <p className="consent-text">
             אפשר להציג מודעות מותאמות לפי השימוש שלכם, או מודעות כלליות בלבד. בכל מקרה המודעות
-            נבחרות מראש, ואינן מוצגות בשבת ובחג. ניתן לשנות בכל עת ב<Link to="/settings">הגדרות</Link>.
+            נבחרות מראש, ואינן מוצגות בשבת ובחג. ניתן לשנות בכל עת ב
+            <Link to="/settings">הגדרות</Link>.
           </p>
         </div>
         <div className="consent-actions">
@@ -41,6 +42,6 @@ export function ConsentBanner() {
           </Button>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

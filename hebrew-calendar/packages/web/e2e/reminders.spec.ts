@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 async function signUp(page: Page): Promise<void> {
   const email = `rem-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
@@ -80,7 +80,9 @@ test.describe('memorial register', () => {
     await expect(page.getByRole('heading', { name: 'התראות' })).toBeVisible();
     await expect(page.getByLabel('התראות במכשיר הזה')).not.toBeChecked();
     expect(
-      await page.evaluate(() => (window as unknown as { __permissionAsks: number }).__permissionAsks),
+      await page.evaluate(
+        () => (window as unknown as { __permissionAsks: number }).__permissionAsks,
+      ),
     ).toBe(0);
   });
 });

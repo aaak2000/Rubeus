@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { type FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 import { Button, ThemeToggle } from '../ui';
 
 export function LoginPage() {
@@ -37,7 +37,9 @@ export function LoginPage() {
 
       <main className="auth-card card">
         <div className="auth-brand">
-          <span className="auth-mark" aria-hidden="true">🕯️</span>
+          <span className="auth-mark" aria-hidden="true">
+            🕯️
+          </span>
           <h1>יומן עברי</h1>
           <p className="muted text-sm">
             {isRegister ? 'יצירת חשבון חדש' : 'לוח עברי מלא, מסונכרן עם היומנים שלכם'}
@@ -48,7 +50,11 @@ export function LoginPage() {
           {isRegister && (
             <label className="field">
               <span className="field-label">שם תצוגה</span>
-              <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="ישראל ישראלי" />
+              <input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="ישראל ישראלי"
+              />
             </label>
           )}
           <label className="field">
@@ -87,7 +93,11 @@ export function LoginPage() {
 
         <p className="auth-switch text-sm">
           {isRegister ? 'כבר יש לכם חשבון?' : 'אין לכם חשבון עדיין?'}{' '}
-          <button type="button" className="link-button" onClick={() => setMode(isRegister ? 'login' : 'register')}>
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => setMode(isRegister ? 'login' : 'register')}
+          >
             {isRegister ? 'התחברות' : 'הרשמה'}
           </button>
         </p>

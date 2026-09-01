@@ -1,10 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthUser } from '../auth/dto';
-import { YahrzeitsService } from './yahrzeits.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateYahrzeitDto, UpdateYahrzeitDto } from './dto';
+import { YahrzeitsService } from './yahrzeits.service';
 
 @ApiTags('yahrzeits')
 @ApiBearerAuth()

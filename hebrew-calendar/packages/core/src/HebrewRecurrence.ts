@@ -1,7 +1,7 @@
 import { HDate, HebrewCalendar } from '@hebcal/core';
-import type { DateConversion, HebrewRecurrenceKind } from './types.js';
 import { fromIsoDate, toIsoDate } from './dateUtils.js';
 import { hebrewDateService } from './HebrewDateService.js';
+import type { DateConversion, HebrewRecurrenceKind } from './types.js';
 
 /** Definition of a recurring Hebrew-date event. */
 export interface HebrewRecurrenceSpec {
@@ -26,7 +26,10 @@ export class HebrewRecurrence {
    * The occurrence of the recurrence in a specific Hebrew year, or undefined
    * when that year precedes or equals the original year.
    */
-  occurrenceInHebrewYear(spec: HebrewRecurrenceSpec, hebrewYear: number): DateConversion | undefined {
+  occurrenceInHebrewYear(
+    spec: HebrewRecurrenceSpec,
+    hebrewYear: number,
+  ): DateConversion | undefined {
     const original = new HDate(fromIsoDate(spec.originalGregorian));
     const hd =
       spec.kind === 'yahrzeit'
@@ -57,7 +60,11 @@ export class HebrewRecurrence {
    * Used when exporting Hebrew recurrences to external calendars that only
    * understand concrete instances.
    */
-  occurrencesBetween(spec: HebrewRecurrenceSpec, startIso: string, endIso: string): DateConversion[] {
+  occurrencesBetween(
+    spec: HebrewRecurrenceSpec,
+    startIso: string,
+    endIso: string,
+  ): DateConversion[] {
     const start = fromIsoDate(startIso);
     const end = fromIsoDate(endIso);
     const out: DateConversion[] = [];

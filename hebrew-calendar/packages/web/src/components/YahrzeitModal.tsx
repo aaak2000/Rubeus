@@ -1,6 +1,6 @@
-import { useMemo, useState, type FormEvent } from 'react';
 import { hebrewDateOfDeath, hebrewDateService } from '@hcal/core';
-import { api, ApiError, type Yahrzeit } from '../api/client';
+import { type FormEvent, useMemo, useState } from 'react';
+import { ApiError, api, type Yahrzeit } from '../api/client';
 import { Button, ConfirmDialog, Modal, Switch, useToast } from '../ui';
 
 interface Props {
@@ -165,11 +165,7 @@ export function YahrzeitModal({ yahrzeit, onClose, onSaved }: Props) {
           />
         </label>
 
-        <Switch
-          checked={afterSunset}
-          onChange={setAfterSunset}
-          label="הפטירה הייתה אחרי השקיעה"
-        />
+        <Switch checked={afterSunset} onChange={setAfterSunset} label="הפטירה הייתה אחרי השקיעה" />
         <p className="field-hint">
           היום העברי מתחיל בשקיעה, ולכן פטירה שאירעה בערב שייכת כבר ליום העברי הבא — והאזכרה תיערך
           יום אחד מאוחר יותר, בכל שנה.

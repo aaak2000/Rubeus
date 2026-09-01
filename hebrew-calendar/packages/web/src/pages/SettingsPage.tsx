@@ -1,12 +1,16 @@
+import { isValidTimeZone, localTimeZone } from '@hcal/core';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { currentState, subscribe, unsubscribe, type PushState } from '../notifications/push';
-import { SubscriptionSection } from './SubscriptionSection';
-import { isValidTimeZone, localTimeZone } from '@hcal/core';
-import { api, ApiError, icsExportUrl, type Calendar, type Profile } from '../api/client';
-import { Button, EmptyState, Skeleton, Switch, useToast } from '../ui';
 import { useAds } from '../ads';
+import { ApiError, api, type Calendar, icsExportUrl, type Profile } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+
+/** 00:00–23:00, for the reminder-hour selector. */
+const HOURS = Array.from({ length: 24 }, (_, h) => h);
+
+import { currentState, type PushState, subscribe, unsubscribe } from '../notifications/push';
+import { Button, EmptyState, Skeleton, Switch, useToast } from '../ui';
+import { SubscriptionSection } from './SubscriptionSection';
 
 const PROVIDER_NAMES: Record<string, string> = {
   google: 'Google Calendar',
@@ -134,21 +138,37 @@ export function SettingsPage() {
       <section className="card stack" aria-labelledby="loc-h">
         <div>
           <h2 id="loc-h">מיקום וזמנים הלכתיים</h2>
-          <p className="muted text-sm">המיקום קובע את זמני היום, ואזור הזמן קובע באיזו שעה נשמרים האירועים.</p>
+          <p className="muted text-sm">
+            המיקום קובע את זמני היום, ואזור הזמן קובע באיזו שעה נשמרים האירועים.
+          </p>
         </div>
         <div className="grid2">
           <label className="field">
             <span className="field-label">קו רוחב</span>
-            <input inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} placeholder="31.7683" />
+            <input
+              inputMode="decimal"
+              value={lat}
+              onChange={(e) => setLat(e.target.value)}
+              placeholder="31.7683"
+            />
           </label>
           <label className="field">
             <span className="field-label">קו אורך</span>
-            <input inputMode="decimal" value={lon} onChange={(e) => setLon(e.target.value)} placeholder="35.2137" />
+            <input
+              inputMode="decimal"
+              value={lon}
+              onChange={(e) => setLon(e.target.value)}
+              placeholder="35.2137"
+            />
           </label>
         </div>
         <label className="field">
           <span className="field-label">אזור זמן</span>
-          <input value={tzid} onChange={(e) => setTzid(e.target.value)} placeholder="Asia/Jerusalem" />
+          <input
+            value={tzid}
+            onChange={(e) => setTzid(e.target.value)}
+            placeholder="Asia/Jerusalem"
+          />
         </label>
         <Switch
           checked={il}
@@ -182,7 +202,10 @@ export function SettingsPage() {
             ))}
           </ul>
         ) : (
-          <EmptyState title="אין חשבונות מחוברים" description="חברו חשבון כדי לסנכרן אירועים אוטומטית." />
+          <EmptyState
+            title="אין חשבונות מחוברים"
+            description="חברו חשבון כדי לסנכרן אירועים אוטומטית."
+          />
         )}
 
         <div className="row-actions">
@@ -200,9 +223,18 @@ export function SettingsPage() {
             <ul>
               {linked.map((c) => (
                 <li key={c.id}>
-                  <span className="calendar-dot" style={{ background: c.color ?? 'var(--ink-subtle)' }} aria-hidden="true" />
+                  <span
+                    className="calendar-dot"
+                    style={{ background: c.color ?? 'var(--ink-subtle)' }}
+                    aria-hidden="true"
+                  />
                   <span className="calendar-name">{c.name}</span>
-                  <Button size="sm" variant="ghost" loading={syncBusy === c.id} onClick={() => syncCalendar(c.id)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    loading={syncBusy === c.id}
+                    onClick={() => syncCalendar(c.id)}
+                  >
                     סנכרון עכשיו
                   </Button>
                 </li>
@@ -266,9 +298,7 @@ export function SettingsPage() {
           hint="בכיבוי יוצגו מודעות כלליות בלבד, ללא התאמה לפי שימוש"
         />
 
-        {ads.resting && (
-          <p className="notice">כרגע שבת או חג — המודעות מושבתות.</p>
-        )}
+        {ads.resting && <p className="notice">כרגע שבת או חג — המודעות מושבתות.</p>}
       </section>
 
       <DeleteAccountSection />
@@ -369,7 +399,7 @@ function NotificationSettings() {
       <label className="field">
         <span className="field-label">שעת התזכורת</span>
         <select value={hour} onChange={(e) => saveHour(Number(e.target.value))}>
-          {Array.from({ length: 24 }, (_, h) => (
+          {HOURS.map((h) => (
             <option key={h} value={h}>
               {String(h).padStart(2, '0')}:00
             </option>
@@ -388,9 +418,7 @@ function NotificationSettings() {
           הדפדפן הזה אינו תומך בהתראות. באייפון יש להתקין את האפליקציה למסך הבית תחילה.
         </p>
       )}
-      {state === 'server-disabled' && (
-        <p className="notice">התראות אינן מוגדרות בשרת הזה.</p>
-      )}
+      {state === 'server-disabled' && <p className="notice">התראות אינן מוגדרות בשרת הזה.</p>}
     </section>
   );
 }
@@ -430,8 +458,8 @@ function DeleteAccountSection() {
       <div>
         <h2 id="danger-h">מחיקת החשבון</h2>
         <p className="muted text-sm">
-          מוחק את החשבון ואת כל מה שנשמר בו: אירועים, יומנים, חשבונות מחוברים ורשימת
-          האזכרות. לא ניתן לשחזר.
+          מוחק את החשבון ואת כל מה שנשמר בו: אירועים, יומנים, חשבונות מחוברים ורשימת האזכרות. לא
+          ניתן לשחזר.
         </p>
       </div>
 
@@ -447,6 +475,7 @@ function DeleteAccountSection() {
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               autoComplete="off"
+              // biome-ignore lint/a11y/noAutofocus: the confirmation field appears on demand; focus belongs in it
               autoFocus
             />
           </label>

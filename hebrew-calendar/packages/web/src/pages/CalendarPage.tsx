@@ -1,25 +1,25 @@
+import { type GeoPoint, localTimeZone, zonedDateKey } from '@hcal/core';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { localTimeZone, zonedDateKey, type GeoPoint } from '@hcal/core';
-import { api, ApiError, type Calendar, type EventInstance } from '../api/client';
-import {
-  GREGORIAN_MONTHS_HE,
-  buildMonthGrid,
-  buildRange,
-  buildWeek,
-  hebrewMonthSpan,
-  hebrewRangeLabel,
-  type GridDay,
-} from '../hebrew';
+import { useAds } from '../ads';
+import { ApiError, api, type Calendar, type EventInstance } from '../api/client';
 import { CalendarHeader } from '../components/CalendarHeader';
 import { DayDrawer } from '../components/DayDrawer';
 import { EventModal } from '../components/EventModal';
-import { MonthView } from '../views/MonthView';
-import { WeekView } from '../views/WeekView';
+import {
+  buildMonthGrid,
+  buildRange,
+  buildWeek,
+  GREGORIAN_MONTHS_HE,
+  type GridDay,
+  hebrewMonthSpan,
+  hebrewRangeLabel,
+} from '../hebrew';
+import { useToast } from '../ui';
 import { AgendaView } from '../views/AgendaView';
 import { HebrewYearView } from '../views/HebrewYearView';
+import { MonthView } from '../views/MonthView';
 import type { ViewMode } from '../views/types';
-import { useToast } from '../ui';
-import { useAds } from '../ads';
+import { WeekView } from '../views/WeekView';
 
 const AGENDA_DAYS = 45;
 
@@ -33,7 +33,9 @@ export function CalendarPage() {
   const [tzid, setTzid] = useState<string>(localTimeZone());
   const [anchor, setAnchor] = useState<string>(() => todayIsoIn(localTimeZone()));
   const [view, setView] = useState<ViewMode>(() =>
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches ? 'agenda' : 'month',
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches
+      ? 'agenda'
+      : 'month',
   );
 
   const [calendars, setCalendars] = useState<Calendar[]>([]);

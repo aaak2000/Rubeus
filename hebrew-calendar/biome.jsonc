@@ -1,0 +1,102 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.11/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": ["**/*.ts", "**/*.tsx", "!**/dist", "!**/node_modules", "!**/prisma/migrations"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        // Used deliberately where a value is known non-null from a check the
+        // rule cannot see; the alternative is noise, not safety.
+        "noNonNullAssertion": "off",
+        "useImportType": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn"
+      },
+      "complexity": {
+        "noForEach": "off"
+      }
+    }
+  },
+  "javascript": {
+    "parser": {
+      // NestJS puts decorators on route parameters (`@Body() dto`). Without
+      // this, Biome cannot parse the API package at all and reports every
+      // controller as a syntax error.
+      "unsafeParameterDecoratorsEnabled": true
+    },
+    "formatter": {
+      "quoteStyle": "single",
+      "trailingCommas": "all",
+      "semicolons": "always",
+      "arrowParentheses": "always"
+    }
+  },
+
+  // Each override works around a rule that is wrong about this codebase —
+  // none of them is a matter of taste.
+  "overrides": [
+    {
+      "includes": ["packages/api/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            // NestJS reads route arguments through parameter decorators, and
+            // the rule does not follow that: it reports `@Body() dto` as
+            // unused on the line above the one that uses it. 79 false
+            // positives here, no true ones.
+            "noUnusedFunctionParameters": "off"
+          },
+          "style": {
+            // `import type` erases the runtime import, and NestJS resolves
+            // injected dependencies from the metadata TypeScript emits for
+            // constructor parameters. Applying this rule to providers breaks
+            // dependency injection at boot with "Nest can't resolve
+            // dependencies ... argument Object at index [0]".
+            "useImportType": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/web/src/views/**",
+        "packages/web/src/ui/**",
+        "packages/web/src/components/**"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            // Chips inside a day cell cannot themselves be buttons — they sit
+            // inside the day-header button, and nesting is invalid HTML. The
+            // keyboard path is the header: it opens the day drawer, where every
+            // event is a real button. Covered by the keyboard-navigation and
+            // focus-restoration end-to-end tests.
+            "noStaticElementInteractions": "off",
+            "useKeyWithClickEvents": "off",
+            // A modal's backdrop click is a mouse convenience; Escape is the
+            // keyboard equivalent and is handled and tested.
+            "noAutofocus": "off",
+            // role="switch" on an input[type=checkbox] takes its checked state
+            // from the native property — the browser maps it to aria-checked.
+            "useAriaPropsForRole": "off",
+            // The grid, tablist and radiogroup roles here have no HTML
+            // equivalent: no element carries grid/gridcell semantics, and a
+            // table would fight the layout. Deliberate, and covered by tests.
+            "useSemanticElements": "off"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -35,13 +35,19 @@ describe('apiFetch — resilience', () => {
   });
 
   it('retries transient 5xx then gives up with the last status', async () => {
-    globalThis.fetch = vi.fn(async () => new Response('boom', { status: 503 })) as unknown as typeof fetch;
-    await expect(apiFetch('https://example.test/x', 'tok', { retries: 2 })).rejects.toThrow(/HTTP 503/);
+    globalThis.fetch = vi.fn(
+      async () => new Response('boom', { status: 503 }),
+    ) as unknown as typeof fetch;
+    await expect(apiFetch('https://example.test/x', 'tok', { retries: 2 })).rejects.toThrow(
+      /HTTP 503/,
+    );
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
   });
 
   it('does not retry a definitive 4xx', async () => {
-    globalThis.fetch = vi.fn(async () => new Response('nope', { status: 400 })) as unknown as typeof fetch;
+    globalThis.fetch = vi.fn(
+      async () => new Response('nope', { status: 400 }),
+    ) as unknown as typeof fetch;
     await expect(apiFetch('https://example.test/x', 'tok')).rejects.toThrow(/HTTP 400/);
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
@@ -139,7 +145,10 @@ describe('SyncEngine — robustness', () => {
   it('keeps the previous cursor when the provider returns none', async () => {
     const store = new MemoryStore();
     store.token = 'existing-token';
-    const engine = new SyncEngine(store, new ScriptedProvider({ changes: [], nextToken: undefined }));
+    const engine = new SyncEngine(
+      store,
+      new ScriptedProvider({ changes: [], nextToken: undefined }),
+    );
     await engine.sync('pull');
     expect(store.token).toBe('existing-token');
   });

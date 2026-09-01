@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Post, Query, Res, UseGuards } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsString, IsUrl, MinLength } from 'class-validator';
-import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthUser } from '../auth/dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OAuthService } from './oauth.service';
 
 class ConnectCaldavDto {
@@ -38,7 +38,11 @@ export class OAuthController {
   }
 
   @Get('google/callback')
-  async googleCallback(@Query('code') code: string, @Query('state') state: string, @Res() res: Response) {
+  async googleCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Res() res: Response,
+  ) {
     await this.oauth.handleGoogleCallback(code, state);
     res.redirect(`${this.webOrigin()}/settings?connected=google`);
   }
@@ -51,7 +55,11 @@ export class OAuthController {
   }
 
   @Get('microsoft/callback')
-  async microsoftCallback(@Query('code') code: string, @Query('state') state: string, @Res() res: Response) {
+  async microsoftCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Res() res: Response,
+  ) {
     await this.oauth.handleMicrosoftCallback(code, state);
     res.redirect(`${this.webOrigin()}/settings?connected=microsoft`);
   }

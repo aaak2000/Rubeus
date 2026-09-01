@@ -1,13 +1,13 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import request from 'supertest';
-import type { INestApplication } from '@nestjs/common';
 import { HDate, zonedDateTimeToUtc } from '@hcal/core';
-import { createTestApp, uniqueEmail } from './setup';
-import { RemindersService } from '../src/notifications/reminders.service';
-import { UnsubscribeService } from '../src/notifications/unsubscribe.service';
+import type { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { MailService } from '../src/notifications/mail.service';
 import { PushService } from '../src/notifications/push.service';
+import { RemindersService } from '../src/notifications/reminders.service';
+import { UnsubscribeService } from '../src/notifications/unsubscribe.service';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { createTestApp, uniqueEmail } from './setup';
 
 let app: INestApplication;
 let token: string;
@@ -68,7 +68,6 @@ afterAll(async () => {
 });
 
 describe('reminder email opt-out', () => {
-  let yahrzeitId: string;
   let whileOptedOutId: string;
 
   it('defaults to email on, at 09:00 local', async () => {
@@ -78,10 +77,9 @@ describe('reminder email opt-out', () => {
   });
 
   it('sends, and every message carries a way out', async () => {
-    const created = await auth(request(app.getHttpServer()).post('/api/yahrzeits'))
+    await auth(request(app.getHttpServer()).post('/api/yahrzeits'))
       .send({ name: 'סבא', deathDate: deathDateForYahrzeitIn(1), remindDaysBefore: [1] })
       .expect(201);
-    yahrzeitId = created.body.id;
 
     outbox.length = 0;
     // atHourOnly=false: this asserts opt-out, not the clock.
@@ -144,7 +142,7 @@ describe('the unsubscribe link', () => {
   it('rejects a forged or altered token', async () => {
     const me = await auth(request(app.getHttpServer()).get('/api/me')).expect(200);
     const good = unsub.tokenFor(me.body.id);
-    const tampered = good.slice(0, -2) + 'xy';
+    const tampered = `${good.slice(0, -2)}xy`;
 
     for (const bad of [tampered, `${me.body.id}.nonsense`, 'garbage', '']) {
       const res = await request(app.getHttpServer())

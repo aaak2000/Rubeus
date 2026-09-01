@@ -1,5 +1,13 @@
-import { IsBoolean, IsDateString, IsEnum, IsISO8601, IsOptional, IsString, MinLength } from 'class-validator';
 import { HebrewRecurrenceKind } from '@prisma/client';
+import {
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class CreateEventDto {
   @IsString() @MinLength(1) title!: string;

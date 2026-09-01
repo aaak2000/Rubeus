@@ -1,12 +1,12 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import request from 'supertest';
-import type { INestApplication } from '@nestjs/common';
 import { HDate } from '@hcal/core';
-import { createTestApp, uniqueEmail } from './setup';
-import { RemindersService } from '../src/notifications/reminders.service';
-import { PushService } from '../src/notifications/push.service';
+import type { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { MailService } from '../src/notifications/mail.service';
+import { PushService } from '../src/notifications/push.service';
+import { RemindersService } from '../src/notifications/reminders.service';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { createTestApp, uniqueEmail } from './setup';
 
 let app: INestApplication;
 let token: string;
@@ -171,7 +171,9 @@ describe('yahrzeit reminder dispatch', () => {
 
 describe('notification config', () => {
   it('reports which channels this deployment can deliver on', async () => {
-    const res = await auth(request(app.getHttpServer()).get('/api/notifications/config')).expect(200);
+    const res = await auth(request(app.getHttpServer()).get('/api/notifications/config')).expect(
+      200,
+    );
     expect(res.body).toHaveProperty('push.enabled');
     expect(res.body).toHaveProperty('email.enabled');
   });

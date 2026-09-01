@@ -12,8 +12,18 @@ interface Props extends ViewProps {
  * so the list stays scannable; this is also the default view on narrow
  * screens, where a seven-column grid cannot breathe.
  */
-export function AgendaView({ days, eventsByDate, selected, onSelect, onCreate, onOpenEvent, tzid }: Props) {
-  const withContent = days.filter((d) => (eventsByDate.get(d.iso)?.length ?? 0) > 0 || d.holidays.length > 0);
+export function AgendaView({
+  days,
+  eventsByDate,
+  selected,
+  onSelect,
+  onCreate,
+  onOpenEvent,
+  tzid,
+}: Props) {
+  const withContent = days.filter(
+    (d) => (eventsByDate.get(d.iso)?.length ?? 0) > 0 || d.holidays.length > 0,
+  );
 
   if (withContent.length === 0) {
     return (
@@ -46,14 +56,15 @@ export function AgendaView({ days, eventsByDate, selected, onSelect, onCreate, o
                 {day.hebrewDay} {day.hebrewMonth}
               </span>
               <span className="agenda-greg">
-                {HEBREW_WEEKDAYS[day.weekday]} · {day.dayOfMonth} ב{GREGORIAN_MONTHS_HE[Number(day.iso.slice(5, 7)) - 1]}
+                {HEBREW_WEEKDAYS[day.weekday]} · {day.dayOfMonth} ב
+                {GREGORIAN_MONTHS_HE[Number(day.iso.slice(5, 7)) - 1]}
               </span>
               {day.isToday && <span className="agenda-today-badge">היום</span>}
             </button>
 
             <div className="agenda-items">
-              {sortedHolidays(day).map((h, i) => (
-                <div key={`h${i}`} className="agenda-item is-holiday">
+              {sortedHolidays(day).map((h) => (
+                <div key={h.titleHe} className="agenda-item is-holiday">
                   <span className="agenda-time">{h.time ?? '—'}</span>
                   <span className="agenda-title">
                     {h.emoji ? `${h.emoji} ` : ''}

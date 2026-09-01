@@ -99,7 +99,11 @@ export class GoogleAdapter implements CalendarProvider {
     let pageToken: string | undefined;
     let nextSyncToken: string | undefined;
     do {
-      const params = new URLSearchParams({ showDeleted: 'true', singleEvents: 'false', maxResults: '250' });
+      const params = new URLSearchParams({
+        showDeleted: 'true',
+        singleEvents: 'false',
+        maxResults: '250',
+      });
       if (sinceToken) params.set('syncToken', sinceToken);
       else params.set('timeMin', new Date(Date.now() - 365 * 24 * 3600 * 1000).toISOString());
       if (pageToken) params.set('pageToken', pageToken);
@@ -126,13 +130,21 @@ export class GoogleAdapter implements CalendarProvider {
     return { providerId: data.id, etag: data.etag };
   }
 
-  async updateEvent(providerId: string, event: CanonicalEvent, etag?: string): Promise<ProviderRef> {
+  async updateEvent(
+    providerId: string,
+    event: CanonicalEvent,
+    etag?: string,
+  ): Promise<ProviderRef> {
     const token = await this.tokens.getAccessToken();
-    const { data } = await apiFetch<GoogleEvent>(this.path(`/${encodeURIComponent(providerId)}`), token, {
-      method: 'PATCH',
-      headers: etag ? { 'If-Match': etag } : {},
-      body: JSON.stringify(toGoogle(event)),
-    });
+    const { data } = await apiFetch<GoogleEvent>(
+      this.path(`/${encodeURIComponent(providerId)}`),
+      token,
+      {
+        method: 'PATCH',
+        headers: etag ? { 'If-Match': etag } : {},
+        body: JSON.stringify(toGoogle(event)),
+      },
+    );
     return { providerId: data.id, etag: data.etag };
   }
 

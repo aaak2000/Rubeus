@@ -114,9 +114,7 @@ export function InterstitialAd({ ad, onDismiss }: Props) {
           <Button variant="primary" onClick={open}>
             לפרטים נוספים
           </Button>
-          <p className="ad-note">
-            המודעות נבחרות מראש ומותאמות לקהל, ואינן מוצגות בשבת ובחג.
-          </p>
+          <p className="ad-note">המודעות נבחרות מראש ומותאמות לקהל, ואינן מוצגות בשבת ובחג.</p>
         </div>
       </div>
     </div>

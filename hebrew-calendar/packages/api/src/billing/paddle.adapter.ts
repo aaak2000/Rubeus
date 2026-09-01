@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { Injectable, Logger } from '@nestjs/common';
 import type { SubscriptionStatus } from '@prisma/client';
 
 /** A provider event reduced to the fields the entitlement layer cares about. */

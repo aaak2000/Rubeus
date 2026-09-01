@@ -1,5 +1,5 @@
-import type { CalendarProvider, CanonicalEvent, SyncDirection } from './types.js';
 import type { SyncMappingRecord, SyncStore } from './SyncStore.js';
+import type { CalendarProvider, CanonicalEvent, SyncDirection } from './types.js';
 
 export interface SyncResult {
   pulledCreated: number;

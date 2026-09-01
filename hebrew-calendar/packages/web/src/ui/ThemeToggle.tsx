@@ -1,4 +1,4 @@
-import { useTheme, type ThemeChoice } from './ThemeProvider';
+import { type ThemeChoice, useTheme } from './ThemeProvider';
 
 const OPTIONS: Array<{ value: ThemeChoice; label: string; icon: string }> = [
   { value: 'light', label: 'בהיר', icon: '☀' },

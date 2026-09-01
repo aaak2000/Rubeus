@@ -1,12 +1,12 @@
 import { Body, Controller, Delete, Get, Headers, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsObject, IsString, MinLength, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { IsObject, IsString, MinLength, ValidateNested } from 'class-validator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthUser } from '../auth/dto';
-import { PushService } from './push.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MailService } from './mail.service';
+import { PushService } from './push.service';
 
 // Decorated so the global ValidationPipe (whitelist: true) keeps the fields.
 class PushKeysDto {
@@ -30,7 +30,6 @@ export class NotificationsController {
     private readonly push: PushService,
     private readonly mail: MailService,
   ) {}
-
 
   /**
    * What the client needs to offer notifications: the VAPID key, and which

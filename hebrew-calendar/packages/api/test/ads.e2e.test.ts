@@ -1,8 +1,8 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
-import { createTestApp } from './setup';
+import request from 'supertest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { createTestApp } from './setup';
 
 let app: INestApplication;
 let prisma: PrismaService;
@@ -71,17 +71,23 @@ describe('serving house ads', () => {
   it('respects the flight window', async () => {
     await prisma.adCampaign.deleteMany({});
     await makeCampaign({ endsAt: new Date(Date.now() - 86_400_000) }); // ended yesterday
-    expect((await server().get('/api/ads/next?placement=interstitial').expect(200)).body.ad).toBeNull();
+    expect(
+      (await server().get('/api/ads/next?placement=interstitial').expect(200)).body.ad,
+    ).toBeNull();
 
     await prisma.adCampaign.deleteMany({});
     await makeCampaign({ startsAt: new Date(Date.now() + 86_400_000) }); // starts tomorrow
-    expect((await server().get('/api/ads/next?placement=interstitial').expect(200)).body.ad).toBeNull();
+    expect(
+      (await server().get('/api/ads/next?placement=interstitial').expect(200)).body.ad,
+    ).toBeNull();
   });
 
   it('keeps placements separate', async () => {
     await prisma.adCampaign.deleteMany({});
     await makeCampaign({ placement: 'inline', title: 'שקע בתוך העמוד' });
-    expect((await server().get('/api/ads/next?placement=interstitial').expect(200)).body.ad).toBeNull();
+    expect(
+      (await server().get('/api/ads/next?placement=interstitial').expect(200)).body.ad,
+    ).toBeNull();
     const inline = await server().get('/api/ads/next?placement=inline').expect(200);
     expect(inline.body.ad.title).toBe('שקע בתוך העמוד');
   });

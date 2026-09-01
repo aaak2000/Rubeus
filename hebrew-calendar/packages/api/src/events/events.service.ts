@@ -1,17 +1,17 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import type { Event as DbEvent } from '@prisma/client';
 import {
+  type GeoPoint,
   gregorianRecurrence,
+  type HebrewRecurrenceSpec,
   hebrewDateService,
   hebrewDayKeyAt,
   hebrewRecurrence,
   zonedDateKey,
   zonedDateTimeToUtc,
-  type GeoPoint,
-  type HebrewRecurrenceSpec,
 } from '@hcal/core';
-import { PrismaService } from '../prisma/prisma.service';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import type { Event as DbEvent } from '@prisma/client';
 import { CalendarsService } from '../calendars/calendars.service';
+import { PrismaService } from '../prisma/prisma.service';
 import type { CreateEventDto, UpdateEventDto } from './dto';
 
 /** A concrete event occurrence returned to clients, annotated with its Hebrew date. */
@@ -65,7 +65,12 @@ export class EventsService {
    */
   private annotate(hebrewDayKey: string): EventInstance['hebrew'] {
     const c = hebrewDateService.fromGregorian(hebrewDayKey);
-    return { text: c.hebrewText, monthName: c.hebrew.monthName, day: c.hebrew.day, year: c.hebrew.year };
+    return {
+      text: c.hebrewText,
+      monthName: c.hebrew.monthName,
+      day: c.hebrew.day,
+      year: c.hebrew.year,
+    };
   }
 
   /** The user's timezone, location and day-boundary preference. */
@@ -74,12 +79,22 @@ export class EventsService {
     const tzid = s?.tzid || 'Asia/Jerusalem';
     const location =
       s && s.latitude !== null && s.longitude !== null
-        ? { latitude: s.latitude, longitude: s.longitude, tzid, elevation: s.elevation ?? 0, il: s.il }
+        ? {
+            latitude: s.latitude,
+            longitude: s.longitude,
+            tzid,
+            elevation: s.elevation ?? 0,
+            il: s.il,
+          }
         : null;
     return { tzid, location, dayBoundary: s?.dayBoundary ?? 'sunset' };
   }
 
-  private toInstance(e: DbEvent, ctx: UserContext, over: Partial<EventInstance> = {}): EventInstance {
+  private toInstance(
+    e: DbEvent,
+    ctx: UserContext,
+    over: Partial<EventInstance> = {},
+  ): EventInstance {
     const start = over.start ?? e.startUtc.toISOString();
     const localDate = zonedDateKey(new Date(start), ctx.tzid);
     // An all-day occurrence is a date, not an instant: it has no evening half,
@@ -128,7 +143,12 @@ export class EventsService {
     });
   }
 
-  async update(userId: string, calendarId: string, id: string, dto: UpdateEventDto): Promise<DbEvent> {
+  async update(
+    userId: string,
+    calendarId: string,
+    id: string,
+    dto: UpdateEventDto,
+  ): Promise<DbEvent> {
     await this.calendars.ensureOwned(userId, calendarId);
     return this.prisma.event.update({
       where: { id },
@@ -141,7 +161,9 @@ export class EventsService {
         allDay: dto.allDay,
         rrule: dto.rrule,
         hebrewRecurrence: dto.hebrewRecurrence,
-        hebrewRecurrenceDate: dto.hebrewRecurrenceDate ? new Date(dto.hebrewRecurrenceDate) : undefined,
+        hebrewRecurrenceDate: dto.hebrewRecurrenceDate
+          ? new Date(dto.hebrewRecurrenceDate)
+          : undefined,
       },
     });
   }
@@ -160,7 +182,12 @@ export class EventsService {
    * instance is annotated with the local day and Hebrew date resolved in the
    * user's timezone.
    */
-  async listRange(userId: string, calendarId: string, startIso: string, endIso: string): Promise<EventInstance[]> {
+  async listRange(
+    userId: string,
+    calendarId: string,
+    startIso: string,
+    endIso: string,
+  ): Promise<EventInstance[]> {
     await this.calendars.ensureOwned(userId, calendarId);
     const start = new Date(startIso);
     const end = new Date(endIso);
@@ -208,7 +235,12 @@ export class EventsService {
         }
       } else if (e.rrule) {
         const durationMs = e.endUtc.getTime() - e.startUtc.getTime();
-        for (const occStart of gregorianRecurrence.occurrencesBetween(e.rrule, e.startUtc, scanFrom, scanTo)) {
+        for (const occStart of gregorianRecurrence.occurrencesBetween(
+          e.rrule,
+          e.startUtc,
+          scanFrom,
+          scanTo,
+        )) {
           const occEnd = new Date(occStart.getTime() + durationMs);
           out.push(
             this.toInstance(e, ctx, {

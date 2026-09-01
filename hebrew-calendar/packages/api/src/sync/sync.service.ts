@@ -1,23 +1,23 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import {
   CalDavAdapter,
+  type CalendarProvider,
   GoogleAdapter,
   IcsCodec,
   MicrosoftAdapter,
-  SyncEngine,
-  type CalendarProvider,
   type SyncDirection,
+  SyncEngine,
   type SyncResult,
 } from '@hcal/sync';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Calendar, ProviderConnection } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
 import { CalendarsService } from '../calendars/calendars.service';
 import { TOKEN_CRYPTO } from '../common/common.module';
 import { TokenCrypto } from '../common/token-crypto';
+import { eventToCanonical } from '../events/event.mapper';
+import { PrismaService } from '../prisma/prisma.service';
 import { PrismaSyncStore } from './prisma-sync-store';
 import { ConnectionTokenSource } from './provider-tokens';
-import { eventToCanonical } from '../events/event.mapper';
 
 @Injectable()
 export class SyncService {
@@ -31,10 +31,17 @@ export class SyncService {
   ) {}
 
   /** Run a sync of one calendar against its linked provider. */
-  async run(userId: string, calendarId: string, direction: SyncDirection = 'two-way'): Promise<SyncResult> {
+  async run(
+    userId: string,
+    calendarId: string,
+    direction: SyncDirection = 'two-way',
+  ): Promise<SyncResult> {
     const calendar = await this.calendars.ensureOwned(userId, calendarId);
-    if (!calendar.connectionId) throw new BadRequestException('Calendar is not linked to a provider');
-    const connection = await this.prisma.providerConnection.findUnique({ where: { id: calendar.connectionId } });
+    if (!calendar.connectionId)
+      throw new BadRequestException('Calendar is not linked to a provider');
+    const connection = await this.prisma.providerConnection.findUnique({
+      where: { id: calendar.connectionId },
+    });
     if (!connection) throw new BadRequestException('Provider connection missing');
 
     const provider = this.buildProvider(calendar, connection);
@@ -68,7 +75,11 @@ export class SyncService {
   }
 
   /** Import events from an ICS document into a calendar. */
-  async importIcs(userId: string, calendarId: string, icsText: string): Promise<{ imported: number }> {
+  async importIcs(
+    userId: string,
+    calendarId: string,
+    icsText: string,
+  ): Promise<{ imported: number }> {
     await this.calendars.ensureOwned(userId, calendarId);
     const events = this.ics.import(icsText);
     for (const e of events) {
