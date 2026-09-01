@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { Subscription, SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { PaddleAdapter } from './paddle.adapter';
 
 /** What the client needs to render the subscription surface. */
 export interface BillingStatus {
@@ -28,7 +29,10 @@ const ENTITLED: SubscriptionStatus[] = ['active', 'trialing', 'pastDue', 'cancel
 export class BillingService {
   private readonly log = new Logger(BillingService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly paddle: PaddleAdapter,
+  ) {}
 
   /** Price in agorot, so a few shekels a month is expressible exactly. */
   get plan() {
@@ -80,6 +84,68 @@ export class BillingService {
       plan: this.plan,
       checkoutAvailable: this.providerConfigured,
     };
+  }
+
+  /**
+   * Cancel from inside the app, effective at the end of the paid period.
+   *
+   * Israeli consumer law requires an ongoing transaction sold online to be
+   * cancellable online, by a route no harder to find than the one that started
+   * it — so this is not a convenience, and it must not route through support.
+   *
+   * The provider is told first. Only once it has accepted do we record the
+   * intent locally, because a local flag the provider never heard about means
+   * a user who believes they cancelled and gets charged again next month.
+   * The webhook that follows is still the source of truth; this write only
+   * keeps the screen honest until it lands.
+   */
+  async cancel(userId: string): Promise<BillingStatus> {
+    const sub = await this.prisma.subscription.findUnique({ where: { userId } });
+    if (!sub || sub.status === 'expired') {
+      throw new NotFoundException('No subscription to cancel');
+    }
+    const atProvider = sub.provider === 'paddle' && sub.providerSubscriptionId;
+    if (atProvider) {
+      await this.paddle.cancelAtPeriodEnd(sub.providerSubscriptionId as string);
+    }
+
+    // With no provider to defer to and no paid period left to run down, there
+    // is nothing for `cancelAtPeriodEnd` to mean: a comped account would keep
+    // its entitlement for good and the cancellation would be a no-op on
+    // screen. So that case ends now instead.
+    const endsImmediately = !atProvider && !sub.currentPeriodEnd;
+    if (endsImmediately) {
+      this.log.log(`ending ${sub.provider} subscription with no period to run down`);
+    }
+
+    await this.prisma.subscription.update({
+      where: { userId },
+      data: endsImmediately
+        ? { cancelAtPeriodEnd: true, status: 'expired' }
+        : { cancelAtPeriodEnd: true },
+    });
+    return this.status(userId);
+  }
+
+  /**
+   * Withdraw a scheduled cancellation while the period is still running.
+   *
+   * Only meaningful before the period ends: once it has, there is nothing to
+   * resume and the user has to subscribe again.
+   */
+  async resume(userId: string, now = new Date()): Promise<BillingStatus> {
+    const sub = await this.prisma.subscription.findUnique({ where: { userId } });
+    if (!sub || !this.entitled(sub, now)) {
+      throw new NotFoundException('No subscription to resume');
+    }
+    if (sub.provider === 'paddle' && sub.providerSubscriptionId) {
+      await this.paddle.resume(sub.providerSubscriptionId);
+    }
+    await this.prisma.subscription.update({
+      where: { userId },
+      data: { cancelAtPeriodEnd: false },
+    });
+    return this.status(userId, now);
   }
 
   /**

@@ -293,6 +293,8 @@ export const api = {
     }),
   billingStatus: () => raw<BillingStatus>('/billing/status', { method: 'GET' }),
   checkoutInfo: () => raw<CheckoutInfo>('/billing/checkout', { method: 'GET' }),
+  cancelSubscription: () => raw<BillingStatus>('/billing/cancel', { method: 'POST' }),
+  resumeSubscription: () => raw<BillingStatus>('/billing/resume', { method: 'POST' }),
   notificationConfig: () => raw<NotificationConfig>('/notifications/config', { method: 'GET' }),
   subscribePush: (sub: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
     raw<{ subscribed: boolean }>('/notifications/push', {

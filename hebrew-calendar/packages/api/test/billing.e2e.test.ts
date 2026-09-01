@@ -213,3 +213,150 @@ describe('checkout', () => {
     await auth(request(app.getHttpServer()).get('/api/billing/checkout')).expect(400);
   });
 });
+
+describe('cancelling from inside the app', () => {
+  const future = () => new Date(Date.now() + 10 * 86_400_000);
+
+  async function set(over: Partial<Parameters<BillingService['upsertFromProvider']>[0]> = {}) {
+    await billing.upsertFromProvider({
+      userId,
+      provider: 'test',
+      status: 'active',
+      currentPeriodEnd: future(),
+      cancelAtPeriodEnd: false,
+      ...over,
+    });
+  }
+
+  it('keeps the paid period and stops the renewal', async () => {
+    await set();
+    const res = await auth(request(app.getHttpServer()).post('/api/billing/cancel')).expect(200);
+    expect(res.body.cancelAtPeriodEnd).toBe(true);
+    // Cancelling ends the renewal, not the period already bought.
+    expect(res.body.adFree).toBe(true);
+  });
+
+  it('ends a comped account now, since it has no period to run down', async () => {
+    // The case that would otherwise set a flag meaning nothing and leave the
+    // user entitled for good, having just been told they cancelled.
+    await set({ currentPeriodEnd: null });
+    const res = await auth(request(app.getHttpServer()).post('/api/billing/cancel')).expect(200);
+    expect(res.body.adFree).toBe(false);
+    expect(res.body.status).toBe('expired');
+  });
+
+  it('takes the cancellation back while the period is still running', async () => {
+    await set({ cancelAtPeriodEnd: true });
+    const res = await auth(request(app.getHttpServer()).post('/api/billing/resume')).expect(200);
+    expect(res.body.cancelAtPeriodEnd).toBe(false);
+    expect(res.body.adFree).toBe(true);
+  });
+
+  it('has nothing to resume once the period has passed', async () => {
+    await set({ currentPeriodEnd: new Date(Date.now() - 1000), cancelAtPeriodEnd: true });
+    await auth(request(app.getHttpServer()).post('/api/billing/resume')).expect(404);
+  });
+
+  it('has nothing to cancel when the subscription is already over', async () => {
+    await set({ status: 'expired' });
+    await auth(request(app.getHttpServer()).post('/api/billing/cancel')).expect(404);
+  });
+
+  it('reports nothing to cancel for an account that never subscribed', async () => {
+    const fresh = await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({ email: uniqueEmail('nosub'), password: 'password123' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/api/billing/cancel')
+      .set('Authorization', `Bearer ${fresh.body.accessToken}`)
+      .expect(404);
+  });
+
+  it('requires authentication', async () => {
+    await request(app.getHttpServer()).post('/api/billing/cancel').expect(401);
+    await request(app.getHttpServer()).post('/api/billing/resume').expect(401);
+  });
+});
+
+describe('cancelling a provider-backed subscription', () => {
+  const realFetch = globalThis.fetch;
+  // Unique per run: providerSubscriptionId is globally unique, so a fixed id
+  // collides with the row an earlier run of this suite left behind.
+  const subId = `sub_cancel_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  let calls: { url: string; method: string; body: unknown }[];
+
+  /** Stand in for Paddle, so the outbound call itself can be asserted. */
+  function stubPaddle(respond: () => Response) {
+    calls = [];
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      calls.push({
+        url: String(url),
+        method: init?.method ?? 'GET',
+        body: init?.body ? JSON.parse(String(init.body)) : null,
+      });
+      return respond();
+    }) as typeof fetch;
+  }
+
+  beforeAll(() => {
+    process.env.PADDLE_API_KEY = 'test-api-key';
+  });
+  afterAll(() => {
+    globalThis.fetch = realFetch;
+    delete process.env.PADDLE_API_KEY;
+  });
+
+  async function paddleSub(cancelAtPeriodEnd = false) {
+    await billing.upsertFromProvider({
+      userId,
+      provider: 'paddle',
+      status: 'active',
+      providerSubscriptionId: subId,
+      currentPeriodEnd: new Date(Date.now() + 10 * 86_400_000),
+      cancelAtPeriodEnd,
+    });
+  }
+
+  it('tells Paddle to stop at the end of the period, not immediately', async () => {
+    stubPaddle(() => new Response('{}', { status: 200 }));
+    await paddleSub();
+    await auth(request(app.getHttpServer()).post('/api/billing/cancel')).expect(200);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.method).toBe('POST');
+    expect(calls[0]!.url).toBe(`https://api.paddle.com/subscriptions/${subId}/cancel`);
+    // Not `immediately`: that would prorate a refund nothing here reconciles.
+    expect(calls[0]!.body).toEqual({ effective_from: 'next_billing_period' });
+  });
+
+  it('does not record a cancellation the provider refused', async () => {
+    // The failure that matters: telling the user they cancelled while Paddle
+    // still bills them next month.
+    stubPaddle(() => new Response('rate limited', { status: 429 }));
+    await paddleSub();
+    await auth(request(app.getHttpServer()).post('/api/billing/cancel')).expect(500);
+
+    const status = await auth(request(app.getHttpServer()).get('/api/billing/status')).expect(200);
+    expect(status.body.cancelAtPeriodEnd).toBe(false);
+  });
+
+  it('accepts a subscription Paddle no longer has', async () => {
+    // 404 means there is nothing left to cancel; refusing would leave the user
+    // unable to complete a cancellation they are entitled to.
+    stubPaddle(() => new Response('not found', { status: 404 }));
+    await paddleSub();
+    const res = await auth(request(app.getHttpServer()).post('/api/billing/cancel')).expect(200);
+    expect(res.body.cancelAtPeriodEnd).toBe(true);
+  });
+
+  it('asks Paddle to drop the scheduled change on resume', async () => {
+    stubPaddle(() => new Response('{}', { status: 200 }));
+    await paddleSub(true);
+    await auth(request(app.getHttpServer()).post('/api/billing/resume')).expect(200);
+
+    expect(calls[0]!.method).toBe('PATCH');
+    expect(calls[0]!.url).toBe(`https://api.paddle.com/subscriptions/${subId}`);
+    expect(calls[0]!.body).toEqual({ scheduled_change: null });
+  });
+});

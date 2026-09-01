@@ -63,6 +63,30 @@ export class BillingController {
   }
 
   /**
+   * Cancel the subscription, from inside the app.
+   *
+   * Reachable in the same place the subscription was bought, and in the same
+   * number of steps — Israeli consumer law requires an ongoing transaction
+   * sold online to be cancellable online, not by phone or email.
+   */
+  @Post('cancel')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  cancel(@CurrentUser() user: AuthUser) {
+    return this.billing.cancel(user.userId);
+  }
+
+  /** Undo a scheduled cancellation, while the paid period is still running. */
+  @Post('resume')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  resume(@CurrentUser() user: AuthUser) {
+    return this.billing.resume(user.userId);
+  }
+
+  /**
    * Paddle webhook. Unauthenticated by necessity — the signature is the
    * authentication, checked against the raw bytes before anything is parsed
    * as meaningful.

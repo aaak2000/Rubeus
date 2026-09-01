@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAds } from '../ads';
 import { ApiError, api, type BillingStatus } from '../api/client';
-import { Button, Skeleton, useToast } from '../ui';
+import { Button, ConfirmDialog, Skeleton, useToast } from '../ui';
 
 declare global {
   interface Window {
@@ -25,6 +25,7 @@ export function SubscriptionSection() {
   const { refreshEntitlement } = useAds();
   const [status, setStatus] = useState<BillingStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const load = useCallback(() => {
     api
@@ -76,6 +77,40 @@ export function SubscriptionSection() {
     }
   }
 
+  async function cancel() {
+    setBusy(true);
+    try {
+      const next = await api.cancelSubscription();
+      setStatus(next);
+      setConfirmingCancel(false);
+      // Wording follows what actually happened: cancelling normally leaves the
+      // paid period running, and saying "the ads are back" then would be wrong.
+      toast.success(
+        next.adFree && next.currentPeriodEnd
+          ? `המנוי בוטל. הוא יישאר בתוקף עד ${formatDate(next.currentPeriodEnd)}.`
+          : 'המנוי בוטל.',
+      );
+      refreshEntitlement();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'ביטול המנוי נכשל. נסו שוב.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resume() {
+    setBusy(true);
+    try {
+      setStatus(await api.resumeSubscription());
+      toast.success('המנוי חודש ויתחדש כרגיל.');
+      refreshEntitlement();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'חידוש המנוי נכשל. נסו שוב.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!status) {
     return (
       <section className="card stack" aria-labelledby="sub-h">
@@ -112,7 +147,20 @@ export function SubscriptionSection() {
               התשלום האחרון לא נקלט. המנוי ממשיך לפעול בינתיים — כדאי לעדכן את אמצעי התשלום.
             </p>
           )}
-          <p className="text-sm muted">לניהול או ביטול המנוי, השתמשו בקישור שנשלח אליכם במייל.</p>
+          {/*
+            Secondary, not ghost. Ghost renders as muted borderless text, and a
+            cancel control that is harder to see than the button that took the
+            money is the thing the law here is aimed at.
+          */}
+          {status.cancelAtPeriodEnd ? (
+            <Button variant="secondary" onClick={resume} loading={busy}>
+              חידוש המנוי
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={() => setConfirmingCancel(true)} loading={busy}>
+              ביטול המנוי
+            </Button>
+          )}
         </>
       ) : (
         <>
@@ -129,6 +177,23 @@ export function SubscriptionSection() {
           </Button>
           {!status.checkoutAvailable && <p className="notice">התשלום אינו מוגדר בשרת הזה עדיין.</p>}
         </>
+      )}
+
+      {confirmingCancel && (
+        <ConfirmDialog
+          title="ביטול המנוי"
+          message={
+            status.currentPeriodEnd
+              ? `המנוי לא יתחדש, אך יישאר בתוקף עד ${formatDate(status.currentPeriodEnd)} — התקופה ששולמה עליה נשמרת. הפרסומות יחזרו רק אחרי המועד הזה.`
+              : 'המנוי ייפסק והפרסומות יחזרו. אפשר לחדש בכל עת.'
+          }
+          confirmLabel="ביטול המנוי"
+          cancelLabel="השארת המנוי"
+          destructive
+          busy={busy}
+          onConfirm={cancel}
+          onCancel={() => setConfirmingCancel(false)}
+        />
       )}
     </section>
   );

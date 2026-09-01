@@ -60,6 +60,60 @@ test.describe('memorial register', () => {
     await expect(page.getByText('כל יכולות היומן פתוחות')).toBeVisible();
   });
 
+  test('cancels the subscription without leaving the app', async ({ page }) => {
+    // Israeli consumer law requires an ongoing transaction sold online to be
+    // cancellable online. Stubbing the status is what makes an entitled
+    // account reachable here at all — there is no way to buy one in a test.
+    // Sign up before stubbing: an entitled account is shown no ad-consent
+    // banner, and the helper waits for one.
+    await signUp(page);
+
+    const periodEnd = new Date(Date.now() + 20 * 86_400_000).toISOString();
+    await page.route('**/api/billing/status', (route) =>
+      route.fulfill({
+        json: {
+          adFree: true,
+          status: 'active',
+          currentPeriodEnd: periodEnd,
+          cancelAtPeriodEnd: false,
+          plan: { priceCents: 990, currency: 'ILS', interval: 'month' },
+          checkoutAvailable: true,
+        },
+      }),
+    );
+
+    let cancelled = false;
+    await page.route('**/api/billing/cancel', (route) => {
+      cancelled = true;
+      route.fulfill({
+        json: {
+          adFree: true,
+          status: 'active',
+          currentPeriodEnd: periodEnd,
+          cancelAtPeriodEnd: true,
+          plan: { priceCents: 990, currency: 'ILS', interval: 'month' },
+          checkoutAvailable: true,
+        },
+      });
+    });
+
+    await page.goto('/settings');
+
+    await page.getByRole('button', { name: 'ביטול המנוי', exact: true }).click();
+
+    // Cancelling must not read as losing the period already paid for.
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('יישאר בתוקף עד');
+    await expect(dialog.getByRole('button', { name: 'השארת המנוי' })).toBeVisible();
+
+    await dialog.getByRole('button', { name: 'ביטול המנוי' }).click();
+    await expect.poll(() => cancelled).toBe(true);
+
+    // Having cancelled, the way back is a button too, not a support ticket.
+    await expect(page.getByRole('button', { name: 'חידוש המנוי' })).toBeVisible();
+    await expect(page.locator('.sub-state')).toContainText('בתוקף עד');
+  });
+
   test('offers notifications, and does not prompt for permission unasked', async ({ page }) => {
     // Record every request for the permission. Asserting on
     // `Notification.permission` instead would test the browser's starting
