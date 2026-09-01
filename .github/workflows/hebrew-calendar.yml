@@ -68,9 +68,11 @@ jobs:
       - name: Lint and format check
         run: pnpm exec biome ci .
 
-      - name: Typecheck
-        run: pnpm -r typecheck
-
+      # No separate typecheck step: every package's `build` is `tsc` over the
+      # very same tsconfig its `typecheck` script uses, so the build is the
+      # typecheck. A standalone `pnpm -r typecheck` would also have to run
+      # after this, not before — web resolves @hcal/core through its built
+      # dist/, which does not exist until the build has run.
       - name: Build all packages
         run: pnpm -r build
 
