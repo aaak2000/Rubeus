@@ -591,3 +591,20 @@ main { flex: 1; padding: var(--space-5); max-width: 1240px; width: 100%; margin:
 .sub-state{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;margin:0}
 .sub-badge{display:inline-block;font-size:var(--text-xs);font-weight:650;padding:2px 10px;border-radius:var(--radius-full);
   background:var(--recurrence-tint);color:var(--recurrence-tint-ink)}
+
+/* ---- evening events ----
+   An event after sunset belongs to the following Hebrew day. Marking it keeps
+   a 21:00 entry on tomorrow's cell from reading as an error. */
+.chip-evening {
+  background: var(--shabbat-wash);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.chip-eve-mark, .eve-mark {
+  font-size: var(--text-xs); font-weight: 650;
+  color: var(--primary-tint-ink); background: var(--primary-tint);
+  border-radius: var(--radius-sm); padding: 0 4px;
+  margin-inline-end: 4px; flex: none;
+}
+.chip-eve-time { font-size: var(--text-xs); color: var(--ink-muted); font-variant-numeric: tabular-nums; }

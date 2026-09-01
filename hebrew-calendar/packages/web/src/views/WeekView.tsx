@@ -14,8 +14,11 @@ interface Props extends ViewProps {
 /**
  * A week laid out against an hour axis.
  *
- * Timed events are positioned by their local start and duration; all-day
- * entries and holidays sit in a header band above the axis.
+ * The columns are Hebrew days, but the axis is a civil clock — those two
+ * disagree for an evening event, which belongs to this Hebrew day yet happens
+ * before its civil day begins. Placing it on the axis would draw it a full day
+ * late, so evening events sit in the header band with their real time and date
+ * instead, alongside all-day entries and holidays.
  */
 export function WeekView({ days, eventsByDate, selected, onSelect, onCreate, onOpenEvent, tzid }: Props) {
   function minutesFromStart(iso: string): number {
@@ -55,16 +58,31 @@ export function WeekView({ days, eventsByDate, selected, onSelect, onCreate, onO
                   </span>
                 ))}
               {(eventsByDate.get(day.iso) ?? [])
-                .filter((e) => e.allDay)
+                .filter((e) => e.allDay || e.isEvening)
                 .map((e) => (
                   <span
                     key={e.id + e.start}
-                    className={`chip chip-event${e.isOccurrence ? ' is-occurrence' : ''}`}
+                    className={[
+                      'chip',
+                      e.isEvening ? 'chip-evening' : 'chip-event',
+                      e.isOccurrence ? 'is-occurrence' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    title={
+                      e.isEvening
+                        ? `ליל ${day.hebrewDay} ב${day.hebrewMonth} — ${zonedTimeKey(new Date(e.start), tzid)} בערב שלפני`
+                        : e.title
+                    }
                     onClick={(ev) => {
                       ev.stopPropagation();
                       onOpenEvent(e);
                     }}
                   >
+                    {e.isEvening && <span className="chip-eve-mark">ליל</span>}
+                    {e.isEvening && (
+                      <span className="chip-eve-time">{zonedTimeKey(new Date(e.start), tzid)}</span>
+                    )}
                     {e.title}
                   </span>
                 ))}
@@ -82,7 +100,9 @@ export function WeekView({ days, eventsByDate, selected, onSelect, onCreate, onO
           ))}
         </div>
         {days.map((day) => {
-          const timed = (eventsByDate.get(day.iso) ?? []).filter((e) => !e.allDay);
+          // Evening events are in the header band; the axis carries only
+          // events whose clock time belongs to this column's civil day.
+          const timed = (eventsByDate.get(day.iso) ?? []).filter((e) => !e.allDay && !e.isEvening);
           return (
             <div
               key={day.iso}

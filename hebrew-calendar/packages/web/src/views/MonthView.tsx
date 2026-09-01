@@ -111,13 +111,22 @@ export function MonthView({ days, eventsByDate, selected, onSelect, onCreate, on
                     <button
                       key={entry.item.id + entry.item.start}
                       type="button"
-                      className={`chip chip-event${entry.item.isOccurrence ? ' is-occurrence' : ''}`}
+                      className={[
+                        'chip',
+                        entry.item.isEvening ? 'chip-evening' : 'chip-event',
+                        entry.item.isOccurrence ? 'is-occurrence' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
                       title={entry.item.title}
                       onClick={(ev) => {
                         ev.stopPropagation();
                         onOpenEvent(entry.item);
                       }}
                     >
+                      {/* The Hebrew day began the evening before; say so, or a
+                          21:00 entry on this cell looks like a mistake. */}
+                      {entry.item.isEvening && <span className="chip-eve-mark">ליל</span>}
                       {entry.item.title}
                     </button>
                   ),

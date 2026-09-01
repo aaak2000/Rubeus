@@ -75,7 +75,14 @@ export function DayDrawer({ day, events, geo, tzid, onClose, onCreate, onOpenEve
               <li key={e.id + e.start}>
                 <button type="button" className="drawer-event" onClick={() => onOpenEvent(e)}>
                   <span className="drawer-event-time">
-                    {e.allDay ? 'כל היום' : `${zonedTimeKey(new Date(e.start), tzid)}–${zonedTimeKey(new Date(e.end), tzid)}`}
+                    {e.allDay ? (
+                      'כל היום'
+                    ) : (
+                      <>
+                        {e.isEvening && <span className="eve-mark">ליל</span>}
+                        {zonedTimeKey(new Date(e.start), tzid)}–{zonedTimeKey(new Date(e.end), tzid)}
+                      </>
+                    )}
                   </span>
                   <span className="drawer-event-title">{e.title}</span>
                   {e.location && <span className="drawer-event-loc muted text-xs">{e.location}</span>}

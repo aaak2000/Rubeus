@@ -68,7 +68,19 @@ export function AgendaView({ days, eventsByDate, selected, onSelect, onCreate, o
                   className={`agenda-item is-event${e.isOccurrence ? ' is-occurrence' : ''}`}
                   onClick={() => onOpenEvent(e)}
                 >
-                  <span className="agenda-time">{e.allDay ? 'כל היום' : zonedTimeKey(new Date(e.start), tzid)}</span>
+                  <span className="agenda-time">
+                    {e.allDay ? (
+                      'כל היום'
+                    ) : (
+                      <>
+                        {/* Without this the time reads against the wrong civil
+                            date: an evening event belongs to this Hebrew day
+                            but happened the evening before. */}
+                        {e.isEvening && <span className="eve-mark">ליל</span>}
+                        {zonedTimeKey(new Date(e.start), tzid)}
+                      </>
+                    )}
+                  </span>
                   <span className="agenda-title">{e.title}</span>
                   {e.location && <span className="agenda-location">{e.location}</span>}
                 </button>
