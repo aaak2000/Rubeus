@@ -56,6 +56,11 @@ export default defineConfig({
         // environment allowlist rather than a property of the account, which
         // is exactly why a test can arrange it here.
         ADMIN_EMAILS: 'e2e-operator@example.test',
+        // Enough for the server to consider Google sign-in configured, so the
+        // login page offers the button. No test contacts Google itself.
+        GOOGLE_CLIENT_ID: 'e2e-client-id',
+        GOOGLE_CLIENT_SECRET: 'e2e-client-secret',
+        GOOGLE_SIGNIN_REDIRECT_URI: 'http://127.0.0.1:3001/api/auth/google/callback',
       },
     },
     {

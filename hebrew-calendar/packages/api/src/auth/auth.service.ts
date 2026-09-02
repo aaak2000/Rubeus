@@ -110,6 +110,18 @@ export class AuthService {
     });
   }
 
+  /**
+   * Issue a session for a user already established by some other means — a
+   * provider sign-in, where there is no password to check.
+   */
+  async issueTokensFor(user: {
+    id: string;
+    email: string;
+    displayName: string | null;
+  }): Promise<AuthTokens> {
+    return this.issueTokens(user.id, user.email, user.displayName);
+  }
+
   private async issueTokens(
     id: string,
     email: string,

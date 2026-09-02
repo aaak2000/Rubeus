@@ -3,6 +3,7 @@ import { ConsentBanner, InterstitialAd, useInterstitial } from './ads';
 import { useAuth } from './auth/AuthContext';
 import { AccessibilityPage } from './pages/AccessibilityPage';
 import { AdminAdsPage } from './pages/AdminAdsPage';
+import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { LoginPage } from './pages/LoginPage';
 import { RemindersPage } from './pages/RemindersPage';
@@ -73,6 +74,9 @@ export function App() {
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
       <Route path="/accessibility" element={<AccessibilityPage />} />
+      {/* Outside RequireAuth: this is what turns the provider's redirect into
+          a session, so demanding one first would be circular. */}
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
       {/* Public on purpose: an unsubscribe link that demands a login is one
           most people answer by marking the mail as spam instead. */}
       <Route path="/unsubscribe" element={<UnsubscribePage />} />

@@ -6,6 +6,8 @@ interface AuthState {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName?: string) => Promise<void>;
+  /** Adopt a session obtained through a provider sign-in. */
+  adopt: (res: AuthResponse) => void;
   logout: () => void;
 }
 
@@ -38,6 +40,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       async register(email, password, displayName) {
         const res = await api.register(email, password, displayName);
+        tokenStore.set(res.accessToken, res.refreshToken);
+        setUser(res.user);
+      },
+      adopt(res) {
         tokenStore.set(res.accessToken, res.refreshToken);
         setUser(res.user);
       },

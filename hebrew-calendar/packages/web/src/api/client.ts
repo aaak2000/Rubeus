@@ -248,6 +248,12 @@ export interface CampaignInput {
   endsAt?: string | null;
 }
 
+/** Which sign-in methods this deployment offers. */
+export interface AuthMethods {
+  password: boolean;
+  google: boolean;
+}
+
 export interface Profile {
   id: string;
   email: string;
@@ -327,6 +333,13 @@ export const api = {
   unsubscribeEmail: (token: string) =>
     raw<UnsubscribeResult>(`/notifications/unsubscribe?token=${encodeURIComponent(token)}`, {
       method: 'POST',
+    }),
+  authMethods: () => raw<AuthMethods>('/auth/methods', { method: 'GET' }),
+  googleSignInUrl: () => raw<{ url: string }>('/auth/google/url', { method: 'GET' }),
+  googleExchange: (code: string) =>
+    raw<AuthResponse>('/auth/google/exchange', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
     }),
   billingStatus: () => raw<BillingStatus>('/billing/status', { method: 'GET' }),
   checkoutInfo: () => raw<CheckoutInfo>('/billing/checkout', { method: 'GET' }),

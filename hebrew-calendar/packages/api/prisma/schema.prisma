@@ -23,7 +23,9 @@ enum HebrewRecurrenceKind {
 model User {
   id           String               @id @default(cuid())
   email        String               @unique
-  passwordHash String
+  /// Null for an account that only ever signed in through a provider. Such an
+  /// account has no password to compare, which `login` already handles.
+  passwordHash String?
   displayName  String?
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
@@ -34,6 +36,48 @@ model User {
   yahrzeits    Yahrzeit[]
   pushSubscriptions PushSubscription[]
   subscription Subscription?
+  identities   AuthIdentity[]
+  loginCodes   LoginCode[]
+}
+
+/// A provider account that may sign in as this user.
+///
+/// Deliberately separate from ProviderConnection: that stores calendar tokens
+/// for syncing, this decides who someone is. Conflating them would mean
+/// disconnecting a calendar could lock somebody out of their account.
+model AuthIdentity {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// "google" today. A string rather than an enum so a second provider is a
+  /// code change and not a migration.
+  provider String
+  /// The provider's stable subject id — not the email, which people change.
+  providerAccountId String
+  /// The address the provider reported, kept for support and display only.
+  email     String?
+  createdAt DateTime @default(now())
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+/// A single-use code handed to the browser after a provider sign-in.
+///
+/// The alternative is putting the token pair in the redirect URL, where it
+/// lands in browser history, referrer headers and any proxy log on the way.
+/// This code is worth one exchange, for two minutes, and nothing after that.
+model LoginCode {
+  id String @id @default(cuid())
+  /// SHA-256 of the code; the code itself is never persisted.
+  codeHash  String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([expiresAt])
 }
 
 /// A issued refresh token, stored only as a hash so a database read cannot
