@@ -22,7 +22,7 @@ self.addEventListener('push', (event) => {
   } catch {
     // A malformed payload should still surface something rather than nothing.
   }
-  const title = data.title || 'יומן עברי';
+  const title = data.title || 'מועד';
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || '',

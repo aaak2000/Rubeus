@@ -161,6 +161,9 @@ importers:
       '@fontsource-variable/assistant':
         specifier: ^5.1.0
         version: 5.3.0
+      '@fontsource/frank-ruhl-libre':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@hcal/core':
         specifier: workspace:*
         version: link:../core
@@ -481,6 +484,9 @@ packages:
 
   '@fontsource-variable/assistant@5.3.0':
     resolution: {integrity: sha512-rH3USV32Zb1TmyFIkuvJfL/ySKWgDAxEDsso5fY5Pnsgg8rzKk3TSNWiCZllFrDwRiJjEgUgMlaoR+PsYdAnZA==}
+
+  '@fontsource/frank-ruhl-libre@5.3.0':
+    resolution: {integrity: sha512-t9cbVzyuEJZGYafP01s7FQ1KAkh/Fs2nakfPzZpPY8BtfvGlZxQRxXAqJ/qluyfZXilpqw0Hk+GlYiWfmSSRTg==}
 
   '@hebcal/core@5.10.1':
     resolution: {integrity: sha512-b9DYJM05l73soZs9I4O7QGAfhh2LpL4kv3pTRiUoMGK1J/hIJbYzg4/990t0rEJSw2/+LVApdyFjzz/21WwOFw==}
@@ -2254,6 +2260,8 @@ snapshots:
     optional: true
 
   '@fontsource-variable/assistant@5.3.0': {}
+
+  '@fontsource/frank-ruhl-libre@5.3.0': {}
 
   '@hebcal/core@5.10.1':
     dependencies:

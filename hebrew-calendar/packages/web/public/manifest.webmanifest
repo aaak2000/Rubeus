@@ -1,11 +1,11 @@
 {
-  "name": "יומן עברי",
-  "short_name": "יומן עברי",
-  "description": "יומן עברי חכם עם סנכרון ליומנים נפוצים",
+  "name": "מועד · יומן עברי",
+  "short_name": "מועד",
+  "description": "יומן עברי מלא, עם ימי הולדת ויארצייטים בתאריך העברי — חוזרים כל שנה במועד הנכון שלהם.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#3b82f6",
+  "background_color": "#0c0e12",
+  "theme_color": "#3730a3",
   "lang": "he",
   "dir": "rtl",
   "icons": [

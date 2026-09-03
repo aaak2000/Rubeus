@@ -1,4 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#3b82f6"/>
-  <text x="50%" y="52%" font-size="300" text-anchor="middle" dominant-baseline="central" fill="#fff" font-family="serif">לוח</text>
+  <!-- The crescent sits well inside the safe area so a maskable icon can be
+       cropped to a circle without clipping it. -->
+  <rect width="512" height="512" rx="96" fill="#1b1f3b"/>
+  <path d="M320 128 A104 104 0 1 0 320 384 A124 124 0 0 1 320 128 Z" fill="#ffffff"/>
+  <rect x="140" y="396" width="232" height="26" rx="13" fill="#f0c274"/>
 </svg>

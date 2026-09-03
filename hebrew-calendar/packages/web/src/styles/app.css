@@ -48,7 +48,16 @@ a { color: var(--primary); text-underline-offset: 2px; }
   top: 0;
   z-index: 20;
 }
-.brand { font-weight: 700; font-size: var(--text-lg); letter-spacing: -0.02em; }
+.brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-lg);
+  letter-spacing: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.brand-logo { color: var(--primary); flex: none; }
 .topbar nav { display: flex; gap: var(--space-1); }
 .topbar nav a {
   padding: var(--space-1) var(--space-3);
@@ -79,7 +88,14 @@ main { flex: 1; padding: var(--space-5); max-width: 1240px; width: 100%; margin:
 .auth-corner { position: absolute; top: var(--space-5); inset-inline-start: var(--space-5); }
 .auth-card { width: min(400px, 100%); display: grid; gap: var(--space-5); box-shadow: var(--shadow-md); }
 .auth-brand { display: grid; gap: var(--space-1); text-align: center; }
-.auth-mark { font-size: 30px; }
+.auth-mark { display: flex; justify-content: center; }
+.auth-brand h1 { font-family: var(--font-display); letter-spacing: 0; }
+.brand-tagline {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--holiday);
+}
 .auth-switch { text-align: center; color: var(--ink-muted); }
 .auth-footer { position: absolute; bottom: var(--space-5); }
 

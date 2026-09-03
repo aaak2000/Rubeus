@@ -2,7 +2,8 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ApiError, api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
-import { Button, ThemeToggle } from '../ui';
+import { BRAND } from '../brand';
+import { Button, Logo, ThemeToggle } from '../ui';
 
 export function LoginPage() {
   const { login, register } = useAuth();
@@ -64,12 +65,13 @@ export function LoginPage() {
 
       <main className="auth-card card">
         <div className="auth-brand">
-          <span className="auth-mark" aria-hidden="true">
-            🕯️
+          <span className="auth-mark">
+            <Logo size={44} decorative />
           </span>
-          <h1>יומן עברי</h1>
+          <h1>{BRAND.name}</h1>
+          <p className="brand-tagline">{BRAND.tagline}</p>
           <p className="muted text-sm">
-            {isRegister ? 'יצירת חשבון חדש' : 'לוח עברי מלא, מסונכרן עם היומנים שלכם'}
+            {isRegister ? 'יצירת חשבון חדש' : `${BRAND.descriptor} — ימי הולדת, יארצייטים ומועדים`}
           </p>
         </div>
 

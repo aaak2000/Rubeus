@@ -1,6 +1,7 @@
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ConsentBanner, InterstitialAd, useInterstitial } from './ads';
 import { useAuth } from './auth/AuthContext';
+import { BRAND } from './brand';
 import { AccessibilityPage } from './pages/AccessibilityPage';
 import { AdminAdsPage } from './pages/AdminAdsPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
@@ -9,7 +10,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RemindersPage } from './pages/RemindersPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { UnsubscribePage } from './pages/UnsubscribePage';
-import { Button, Skeleton, ThemeToggle } from './ui';
+import { Button, Logo, Skeleton, ThemeToggle } from './ui';
 
 function Shell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -31,7 +32,8 @@ function Shell({ children }: { children: React.ReactNode }) {
       </a>
       <header className="topbar">
         <span className="brand">
-          <span aria-hidden="true">🕯️</span> יומן עברי
+          <Logo size={22} decorative />
+          {BRAND.name}
         </span>
         <nav aria-label="ניווט ראשי">
           {nav.map((n) => (

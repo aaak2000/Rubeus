@@ -16,7 +16,7 @@ export class MailService {
 
   constructor() {
     const host = process.env.SMTP_HOST;
-    this.from = process.env.MAIL_FROM || 'יומן עברי <no-reply@example.com>';
+    this.from = process.env.MAIL_FROM || 'מועד <no-reply@example.com>';
     if (!host) {
       this.transport = null;
       this.log.log('SMTP_HOST not set — email delivery is disabled');

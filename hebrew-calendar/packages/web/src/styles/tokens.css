@@ -29,11 +29,11 @@
   --border-strong: #8b93a3;  /* 3.09:1 on surface — WCAG 1.4.11 */
 
   /* --- interactive --- */
-  --primary: #2b57c4;        /* 6.3:1 on white */
-  --primary-hover: #234aa8;
-  --primary-active: #1d3f8f;
-  --primary-tint: #eaf0fd;
-  --primary-tint-ink: #1e46a4; /* 7.4:1 on the tint */
+  --primary: #3730a3;        /* 9.9:1 on white */
+  --primary-hover: #312e81;
+  --primary-active: #2b2870;
+  --primary-tint: #ecedfa;
+  --primary-tint-ink: #312e81; /* 9.8:1 on the tint */
 
   /* --- semantic --- */
   --danger: #b4232c;
@@ -82,6 +82,10 @@
 
   /* --- typography --- */
   --font-sans: 'Assistant Variable', 'Assistant', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  /* The wordmark only. A Hebrew serif carrying the tradition of printed
+     texts, against the sans the interface runs on — an old calendar in a new
+     tool. Self-hosted like Assistant, so nothing is fetched at runtime. */
+  --font-display: 'Frank Ruhl Libre', 'Times New Roman', serif;
   --text-xs: 0.75rem;
   --text-sm: 0.8125rem;
   --text-base: 0.9375rem;
@@ -116,11 +120,11 @@
     --border: #262c36;
     --border-strong: #5d687a;  /* 3.18:1 on surface */
 
-    --primary: #8fb0ff;       /* 8.6:1 on surface */
-    --primary-hover: #a6c0ff;
-    --primary-active: #b8ceff;
-    --primary-tint: #182338;
-    --primary-tint-ink: #a9c4ff;
+    --primary: #a5a8f0;       /* 8.1:1 on surface */
+    --primary-hover: #b6bbfa;
+    --primary-active: #c6c9fc;
+    --primary-tint: #1c1e33;
+    --primary-tint-ink: #b6bbfa;
 
     --danger: #ff9b9b;
     --danger-hover: #ffb3b3;
@@ -166,11 +170,11 @@
   --border: #262c36;
   --border-strong: #5d687a;  /* 3.18:1 on surface */
 
-  --primary: #8fb0ff;
-  --primary-hover: #a6c0ff;
-  --primary-active: #b8ceff;
-  --primary-tint: #182338;
-  --primary-tint-ink: #a9c4ff;
+  --primary: #a5a8f0;
+  --primary-hover: #b6bbfa;
+  --primary-active: #c6c9fc;
+  --primary-tint: #1c1e33;
+  --primary-tint-ink: #b6bbfa;
 
   --danger: #ff9b9b;
   --danger-hover: #ffb3b3;
