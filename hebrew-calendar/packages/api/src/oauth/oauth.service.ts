@@ -1,9 +1,9 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../prisma/prisma.service';
 import { TOKEN_CRYPTO } from '../common/common.module';
 import { TokenCrypto } from '../common/token-crypto';
+import { PrismaService } from '../prisma/prisma.service';
 
 interface TokenResponse {
   access_token: string;
@@ -28,10 +28,13 @@ export class OAuthService {
 
   /** A signed, short-lived state token binding the callback to a user. */
   private async makeState(userId: string): Promise<string> {
-    return this.jwt.signAsync({ sub: userId }, {
-      secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
-      expiresIn: '10m',
-    });
+    return this.jwt.signAsync(
+      { sub: userId },
+      {
+        secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
+        expiresIn: '10m',
+      },
+    );
   }
 
   private async readState(state: string): Promise<string> {
@@ -94,7 +97,10 @@ export class OAuthService {
       redirect_uri: this.config.getOrThrow<string>('MS_REDIRECT_URI'),
       grant_type: 'authorization_code',
     });
-    const tokens = await this.exchange(`https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`, body);
+    const tokens = await this.exchange(
+      `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`,
+      body,
+    );
     return this.persist(userId, 'microsoft', tokens);
   }
 

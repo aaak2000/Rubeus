@@ -1,6 +1,8 @@
 import { HDate, months } from '@hebcal/core';
-import type { DateConversion, HebrewDate } from './types.js';
 import { fromIsoDate, isValidDate, toIsoDate } from './dateUtils.js';
+import { zonedDateKey } from './timezone.js';
+import type { DateConversion, GeoPoint, HebrewDate } from './types.js';
+import { zmanimService } from './ZmanimService.js';
 
 /**
  * Conversion and formatting for the Hebrew calendar.
@@ -65,6 +67,26 @@ export class HebrewDateService {
   /** English name of a Hebrew month, accounting for leap years. */
   monthName(month: number, hebrewYear: number): string {
     return HDate.getMonthName(month, hebrewYear);
+  }
+
+  /**
+   * The Hebrew date in effect at a given instant.
+   *
+   * The Hebrew day begins at sunset, not midnight: after sunset the date is
+   * already the following Hebrew day. When a location is supplied the sunset
+   * for that place is used; without one the calendar day is used, which is
+   * correct until sunset.
+   */
+  at(instant: Date, tzid: string, location?: GeoPoint): DateConversion & { afterSunset: boolean } {
+    const dayKey = zonedDateKey(instant, tzid);
+    let afterSunset = false;
+    if (location) {
+      const times = zmanimService.sunsetInstant(dayKey, location);
+      if (times && instant.getTime() >= times.getTime()) afterSunset = true;
+    }
+    const hd = new HDate(fromIsoDate(dayKey));
+    const effective = afterSunset ? hd.add(1, 'd') : hd;
+    return { ...this.describe(effective), afterSunset };
   }
 
   /** Validate that a Gregorian ISO date can be parsed. */

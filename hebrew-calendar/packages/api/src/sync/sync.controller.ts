@@ -1,12 +1,27 @@
-import { Body, Controller, Get, Header, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { SyncDirection } from '@hcal/sync';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Header,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { IsString, MinLength } from 'class-validator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthUser } from '../auth/dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SyncService } from './sync.service';
 
+// See the note in auth.controller: undecorated fields are stripped by the
+// global ValidationPipe's whitelist.
 class ImportIcsDto {
+  @IsString()
+  @MinLength(1)
   ics!: string;
 }
 
@@ -22,9 +37,13 @@ export class SyncController {
   run(
     @CurrentUser() user: AuthUser,
     @Param('calendarId') calendarId: string,
-    @Query('direction') direction?: SyncDirection,
+    @Query('direction') direction?: string,
   ) {
-    return this.sync.run(user.userId, calendarId, direction ?? 'two-way');
+    const allowed: SyncDirection[] = ['push', 'pull', 'two-way'];
+    if (direction && !allowed.includes(direction as SyncDirection)) {
+      throw new BadRequestException(`direction must be one of: ${allowed.join(', ')}`);
+    }
+    return this.sync.run(user.userId, calendarId, (direction as SyncDirection) ?? 'two-way');
   }
 
   @Get('export.ics')
@@ -34,7 +53,11 @@ export class SyncController {
   }
 
   @Post('import.ics')
-  importIcs(@CurrentUser() user: AuthUser, @Param('calendarId') calendarId: string, @Body() dto: ImportIcsDto) {
+  importIcs(
+    @CurrentUser() user: AuthUser,
+    @Param('calendarId') calendarId: string,
+    @Body() dto: ImportIcsDto,
+  ) {
     return this.sync.importIcs(user.userId, calendarId, dto.ics);
   }
 }

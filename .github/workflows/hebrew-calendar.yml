@@ -1,0 +1,146 @@
+name: Hebrew Calendar
+
+# Scoped to the hebrew-calendar project so it never runs for changes to the
+# unrelated Rubeus sources that share this repository.
+on:
+  push:
+    paths:
+      - 'hebrew-calendar/**'
+      - '.github/workflows/hebrew-calendar.yml'
+  pull_request:
+    paths:
+      - 'hebrew-calendar/**'
+      - '.github/workflows/hebrew-calendar.yml'
+
+defaults:
+  run:
+    working-directory: hebrew-calendar
+
+jobs:
+  verify:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hcal
+          POSTGRES_PASSWORD: hcal
+          POSTGRES_DB: hcal
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hcal"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://hcal:hcal@localhost:5432/hcal?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      # 32 bytes of zeros; CI never handles real provider tokens.
+      TOKEN_ENCRYPTION_KEY: '0000000000000000000000000000000000000000000000000000000000000000'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: hebrew-calendar/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @hcal/api exec prisma generate
+
+      - name: Apply database migrations
+        run: pnpm --filter @hcal/api exec prisma migrate deploy
+
+      - name: Lint and format check
+        run: pnpm exec biome ci .
+
+      # No separate typecheck step: every package's `build` is `tsc` over the
+      # very same tsconfig its `typecheck` script uses, so the build is the
+      # typecheck. A standalone `pnpm -r typecheck` would also have to run
+      # after this, not before — web resolves @hcal/core through its built
+      # dist/, which does not exist until the build has run.
+      - name: Build all packages
+        run: pnpm -r build
+
+      - name: Run tests
+        run: pnpm -r test
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    needs: verify
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hcal
+          POSTGRES_PASSWORD: hcal
+          POSTGRES_DB: hcal
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hcal"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://hcal:hcal@localhost:5432/hcal?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      TOKEN_ENCRYPTION_KEY: '0000000000000000000000000000000000000000000000000000000000000000'
+      WEB_ORIGIN: http://127.0.0.1:5173
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: hebrew-calendar/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @hcal/api exec prisma generate
+
+      - name: Apply database migrations
+        run: pnpm --filter @hcal/api exec prisma migrate deploy
+
+      - name: Build all packages
+        run: pnpm -r build
+
+      - name: Install Playwright browser
+        run: pnpm --filter @hcal/web exec playwright install --with-deps chromium
+
+      - name: Run end-to-end tests
+        run: pnpm --filter @hcal/web test:e2e
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: hebrew-calendar/packages/web/test-results/
+          retention-days: 7

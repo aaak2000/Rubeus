@@ -1,12 +1,12 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import {
+  type GeoPoint,
+  type HolidayQueryOptions,
   hebrewDateService,
   holidayService,
   zmanimService,
-  type GeoPoint,
-  type HolidayQueryOptions,
 } from '@hcal/core';
+import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 
 function parseBool(v: string | undefined, def = false): boolean {
   if (v === undefined) return def;
@@ -45,11 +45,16 @@ export class HebrewController {
 
   /** Convert a Hebrew date (?year=&month=&day=) to Gregorian. */
   @Get('convert-hebrew')
-  convertHebrew(@Query('year') year: string, @Query('month') month: string, @Query('day') day: string) {
+  convertHebrew(
+    @Query('year') year: string,
+    @Query('month') month: string,
+    @Query('day') day: string,
+  ) {
     const y = Number(year);
     const m = Number(month);
     const d = Number(day);
-    if ([y, m, d].some(Number.isNaN)) throw new BadRequestException('year, month, day are required numbers');
+    if ([y, m, d].some(Number.isNaN))
+      throw new BadRequestException('year, month, day are required numbers');
     return hebrewDateService.fromHebrew(y, m, d);
   }
 
@@ -64,7 +69,8 @@ export class HebrewController {
       locale: q.locale ?? 'he',
     };
     if (q.start && q.end) return holidayService.between(q.start, q.end, opts);
-    if (q.year && q.month) return holidayService.forGregorianMonth(Number(q.year), Number(q.month), opts);
+    if (q.year && q.month)
+      return holidayService.forGregorianMonth(Number(q.year), Number(q.month), opts);
     throw new BadRequestException('Provide either ?year=&month= or ?start=&end=');
   }
 
@@ -82,7 +88,8 @@ export class HebrewController {
   molad(@Query('year') year: string, @Query('month') month: string) {
     const y = Number(year);
     const m = Number(month);
-    if (Number.isNaN(y) || Number.isNaN(m)) throw new BadRequestException('year and month are required');
+    if (Number.isNaN(y) || Number.isNaN(m))
+      throw new BadRequestException('year and month are required');
     return holidayService.molad(y, m);
   }
 }

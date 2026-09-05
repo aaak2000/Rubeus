@@ -33,7 +33,7 @@ export class CalDavAdapter implements CalendarProvider {
 
   private authHeader(): string {
     const raw = `${this.config.username}:${this.config.password}`;
-    return 'Basic ' + Buffer.from(raw).toString('base64');
+    return `Basic ${Buffer.from(raw).toString('base64')}`;
   }
 
   private resourceUrl(href: string): string {
@@ -42,12 +42,19 @@ export class CalDavAdapter implements CalendarProvider {
     return `${base.origin}${href}`;
   }
 
-  private async dav(method: string, url: string, body?: string, extraHeaders: Record<string, string> = {}): Promise<Response> {
+  private async dav(
+    method: string,
+    url: string,
+    body?: string,
+    extraHeaders: Record<string, string> = {},
+  ): Promise<Response> {
     const res = await fetch(url, {
       method,
       headers: {
         Authorization: this.authHeader(),
-        'Content-Type': body?.startsWith('BEGIN:') ? 'text/calendar; charset=utf-8' : 'application/xml; charset=utf-8',
+        'Content-Type': body?.startsWith('BEGIN:')
+          ? 'text/calendar; charset=utf-8'
+          : 'application/xml; charset=utf-8',
         ...extraHeaders,
       },
       body,
@@ -95,13 +102,20 @@ export class CalDavAdapter implements CalendarProvider {
       .filter((r) => r.calendarData)
       .map((r) => {
         const [event] = this.codec.import(r.calendarData!);
-        return { providerId: r.href, event: event ? { ...event, uid: r.href } : null, etag: r.etag };
+        return {
+          providerId: r.href,
+          event: event ? { ...event, uid: r.href } : null,
+          etag: r.etag,
+        };
       });
     return { changes, nextToken: undefined };
   }
 
   private eventHref(event: CanonicalEvent): string {
-    const id = event.uid.startsWith('http') || event.uid.includes('/') ? lastSegment(event.uid) : `${event.uid}.ics`;
+    const id =
+      event.uid.startsWith('http') || event.uid.includes('/')
+        ? lastSegment(event.uid)
+        : `${event.uid}.ics`;
     return this.resourceUrl(new URL(id, this.config.collectionUrl).pathname);
   }
 
@@ -112,7 +126,11 @@ export class CalDavAdapter implements CalendarProvider {
     return { providerId: href, etag: res.headers.get('etag') ?? undefined };
   }
 
-  async updateEvent(providerId: string, event: CanonicalEvent, etag?: string): Promise<ProviderRef> {
+  async updateEvent(
+    providerId: string,
+    event: CanonicalEvent,
+    etag?: string,
+  ): Promise<ProviderRef> {
     const href = this.resourceUrl(providerId);
     const ics = this.codec.export([{ ...event, uid: lastSegment(href).replace(/\.ics$/, '') }]);
     const res = await this.dav('PUT', href, ics, etag ? { 'If-Match': etag } : {});
@@ -131,6 +149,9 @@ function parseMultistatus(xml: string): DavResource[] {
   const out: DavResource[] = [];
   const responseRe = /<[a-z0-9]*:?response[\s>]([\s\S]*?)<\/[a-z0-9]*:?response>/gi;
   let m: RegExpExecArray | null;
+  // The standard way to walk a global regex; hoisting the assignment out of
+  // the condition needs a duplicated exec call.
+  // biome-ignore lint/suspicious/noAssignInExpressions: idiomatic regex iteration
   while ((m = responseRe.exec(xml))) {
     const block = m[1] ?? '';
     const href = extractTag(block, 'href');

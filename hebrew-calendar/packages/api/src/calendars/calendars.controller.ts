@@ -1,9 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsHexColor, IsOptional, IsString, MinLength } from 'class-validator';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthUser } from '../auth/dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CalendarsService } from './calendars.service';
 
 class CreateCalendarDto {

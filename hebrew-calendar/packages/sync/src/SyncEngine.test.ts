@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SyncEngine, hashEvent } from './SyncEngine.js';
+import { hashEvent, SyncEngine } from './SyncEngine.js';
 import type { SyncMappingRecord, SyncStore } from './SyncStore.js';
 import type { CalendarProvider, CanonicalEvent, ChangeSet, ProviderRef } from './types.js';
 
@@ -129,7 +129,12 @@ describe('SyncEngine', () => {
     await store.upsertLocalEvent(local);
     await store.saveMapping({ localUid: 'a', providerId: 'remote-a', lastSyncedHash: 'stale' });
     provider.pending = {
-      changes: [{ providerId: 'remote-a', event: mkEvent('a', { title: 'remote-old', updatedAt: '2024-06-05T00:00:00Z' }) }],
+      changes: [
+        {
+          providerId: 'remote-a',
+          event: mkEvent('a', { title: 'remote-old', updatedAt: '2024-06-05T00:00:00Z' }),
+        },
+      ],
       nextToken: 't',
     };
     const res = await new SyncEngine(store, provider).sync('two-way');

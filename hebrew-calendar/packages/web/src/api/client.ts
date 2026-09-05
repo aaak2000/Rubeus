@@ -53,20 +53,37 @@ async function raw<T>(path: string, init: RequestInit, retry = true): Promise<T>
   return text ? (JSON.parse(text) as T) : (undefined as T);
 }
 
-async function tryRefresh(): Promise<boolean> {
-  try {
-    const res = await fetch(`${BASE}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: tokenStore.refresh }),
-    });
-    if (!res.ok) return false;
-    const data = (await res.json()) as AuthResponse;
-    tokenStore.set(data.accessToken, data.refreshToken);
-    return true;
-  } catch {
-    return false;
-  }
+/**
+ * The refresh currently in flight, if any.
+ *
+ * Refresh tokens rotate, and reusing a spent one is treated by the server as
+ * a leak — it revokes the whole session family. A page load fires several
+ * requests at once, so without this every one of them would answer its own
+ * 401 by spending the same token, and the second would log the user out. One
+ * rotation, shared by every caller waiting on it.
+ */
+let refreshInFlight: Promise<boolean> | null = null;
+
+function tryRefresh(): Promise<boolean> {
+  refreshInFlight ??= (async () => {
+    try {
+      const res = await fetch(`${BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: tokenStore.refresh }),
+      });
+      if (!res.ok) return false;
+      const data = (await res.json()) as AuthResponse;
+      tokenStore.set(data.accessToken, data.refreshToken);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      // Cleared only once settled, so a later 401 can refresh again.
+      refreshInFlight = null;
+    }
+  })();
+  return refreshInFlight;
 }
 
 // --- typed response shapes ---
@@ -74,6 +91,22 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   user: { id: string; email: string; displayName: string | null };
+}
+export interface SyncItemError {
+  phase: 'pull' | 'push';
+  id?: string;
+  message: string;
+}
+export interface SyncResult {
+  pulledCreated: number;
+  pulledUpdated: number;
+  pulledDeleted: number;
+  pushedCreated: number;
+  pushedUpdated: number;
+  pushedDeleted: number;
+  conflicts: number;
+  /** Per-item failures that did not abort the run. */
+  errors: SyncItemError[];
 }
 export interface Calendar {
   id: string;
@@ -92,7 +125,18 @@ export interface EventInstance {
   end: string;
   allDay: boolean;
   isOccurrence: boolean;
+  /** Civil calendar day in the user's timezone (YYYY-MM-DD), resolved server-side. */
+  localDate: string;
+  /**
+   * The day this belongs to on the Hebrew calendar. After sunset the Hebrew
+   * day has already turned, so this is the day *after* `localDate`.
+   */
+  hebrewDay: string;
+  /** True when the two differ — the event falls in the evening. */
+  isEvening: boolean;
   hebrewRecurrence: string | null;
+  /** iCalendar recurrence, when the event repeats on the civil calendar. */
+  rrule: string | null;
   hebrew: { text: string; monthName: string; day: number; year: number };
 }
 export interface CalendarItem {
@@ -104,10 +148,121 @@ export interface CalendarItem {
   emoji?: string;
   time?: string;
 }
+export interface Yahrzeit {
+  id: string;
+  name: string;
+  hebrewName: string | null;
+  relation: string | null;
+  /** Gregorian date of death, YYYY-MM-DD. */
+  deathDate: string;
+  /** Death after sunset puts the Hebrew date — and the observance — a day on. */
+  afterSunset: boolean;
+  note: string | null;
+  remindDaysBefore: number[];
+  hebrewDateText: string;
+  next: {
+    gregorian: string;
+    hebrewText: string;
+    hebrewYearText: string;
+    hebrewYear: number;
+    daysUntil: number;
+    /** Nightfall the evening before — when the memorial candle is lit. */
+    candleAt: string | null;
+    candleDate: string;
+  } | null;
+}
+export interface YahrzeitInput {
+  name: string;
+  hebrewName?: string;
+  relation?: string;
+  deathDate: string;
+  afterSunset?: boolean;
+  note?: string;
+  remindDaysBefore?: number[];
+}
+export interface UnsubscribeResult {
+  unsubscribed: boolean;
+}
+export interface BillingStatus {
+  /** Whether ads should be suppressed for this user right now. */
+  adFree: boolean;
+  status: 'active' | 'trialing' | 'pastDue' | 'canceled' | 'expired' | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  plan: { priceCents: number; currency: string; interval: 'month' };
+  /** False when the deployment has no billing provider configured. */
+  checkoutAvailable: boolean;
+}
+export interface CheckoutInfo {
+  provider: string;
+  priceId: string;
+  clientToken: string | null;
+  environment: string;
+  email: string;
+}
+export interface NotificationConfig {
+  push: { enabled: boolean; publicKey: string | null };
+  email: { enabled: boolean };
+}
+export interface AdConfig {
+  network: { enabled: boolean; provider: 'adsense' | null; clientId: string | null };
+  interstitial: { minNavigations: number; minMinutesBetween: number; maxPerDay: number };
+}
+export interface ServedAd {
+  id: string;
+  advertiser: string;
+  title: string;
+  body: string | null;
+  imageUrl: string | null;
+  targetUrl: string;
+}
+export type AdPlacementName = 'interstitial' | 'inline';
+
+/** A campaign as the operator sees it, counters included. */
+export interface Campaign {
+  id: string;
+  advertiser: string;
+  title: string;
+  body: string | null;
+  imageUrl: string | null;
+  targetUrl: string;
+  placement: AdPlacementName;
+  weight: number;
+  active: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+  impressions: number;
+  clicks: number;
+  clickRate: number | null;
+  createdAt: string;
+}
+
+export interface CampaignInput {
+  advertiser?: string;
+  title?: string;
+  body?: string | null;
+  imageUrl?: string | null;
+  targetUrl?: string;
+  placement?: AdPlacementName;
+  weight?: number;
+  active?: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
+}
+
+/** Which sign-in methods this deployment offers. */
+export interface AuthMethods {
+  password: boolean;
+  google: boolean;
+}
+
 export interface Profile {
   id: string;
   email: string;
   displayName: string | null;
+  /** Whether this account may reach the operator tools. Display only — the
+      server decides access, and does so from the same allowlist. */
+  isAdmin: boolean;
   settings: {
     il: boolean;
     latitude: number | null;
@@ -115,13 +270,20 @@ export interface Profile {
     tzid: string;
     candleMinutes: number;
     locale: string;
+    /** Reminder email on or off. Push is opted into per device instead. */
+    emailReminders: boolean;
+    /** Local hour reminders arrive at, in the user's own timezone. */
+    reminderHour: number;
   } | null;
   connections: { id: string; provider: string; accountEmail: string | null }[];
 }
 
 export const api = {
   register: (email: string, password: string, displayName?: string) =>
-    raw<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, displayName }) }),
+    raw<AuthResponse>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, displayName }),
+    }),
   login: (email: string, password: string) =>
     raw<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
 
@@ -132,14 +294,26 @@ export const api = {
   calendars: () => raw<Calendar[]>('/calendars', { method: 'GET' }),
 
   events: (calendarId: string, start: string, end: string) =>
-    raw<EventInstance[]>(`/calendars/${calendarId}/events?start=${start}&end=${end}`, { method: 'GET' }),
+    raw<EventInstance[]>(`/calendars/${calendarId}/events?start=${start}&end=${end}`, {
+      method: 'GET',
+    }),
   createEvent: (calendarId: string, body: Record<string, unknown>) =>
-    raw<EventInstance>(`/calendars/${calendarId}/events`, { method: 'POST', body: JSON.stringify(body) }),
+    raw<EventInstance>(`/calendars/${calendarId}/events`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateEvent: (calendarId: string, id: string, body: Record<string, unknown>) =>
+    raw<EventInstance>(`/calendars/${calendarId}/events/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
   deleteEvent: (calendarId: string, id: string) =>
     raw(`/calendars/${calendarId}/events/${id}`, { method: 'DELETE' }),
 
   holidays: (year: number, month: number, il: boolean) =>
-    raw<CalendarItem[]>(`/hebrew/holidays?year=${year}&month=${month}&il=${il}&locale=he`, { method: 'GET' }),
+    raw<CalendarItem[]>(`/hebrew/holidays?year=${year}&month=${month}&il=${il}&locale=he`, {
+      method: 'GET',
+    }),
   zmanim: (date: string, lat: number, lon: number, tzid: string) =>
     raw<{ times: Record<string, string | null> }>(
       `/hebrew/zmanim?date=${date}&lat=${lat}&lon=${lon}&tzid=${encodeURIComponent(tzid)}`,
@@ -148,9 +322,59 @@ export const api = {
 
   googleUrl: () => raw<{ url: string }>('/oauth/google/url', { method: 'GET' }),
   microsoftUrl: () => raw<{ url: string }>('/oauth/microsoft/url', { method: 'GET' }),
-  sync: (calendarId: string) => raw(`/calendars/${calendarId}/sync`, { method: 'POST' }),
+  sync: (calendarId: string) =>
+    raw<SyncResult>(`/calendars/${calendarId}/sync`, { method: 'POST' }),
+  yahrzeits: () => raw<Yahrzeit[]>('/yahrzeits', { method: 'GET' }),
+  createYahrzeit: (body: YahrzeitInput) =>
+    raw<Yahrzeit>('/yahrzeits', { method: 'POST', body: JSON.stringify(body) }),
+  updateYahrzeit: (id: string, body: Partial<YahrzeitInput>) =>
+    raw<Yahrzeit>(`/yahrzeits/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteYahrzeit: (id: string) =>
+    raw<{ deleted: boolean }>(`/yahrzeits/${id}`, { method: 'DELETE' }),
+  deleteAccount: () => raw<{ deleted: boolean }>('/me', { method: 'DELETE' }),
+  unsubscribeEmail: (token: string) =>
+    raw<UnsubscribeResult>(`/notifications/unsubscribe?token=${encodeURIComponent(token)}`, {
+      method: 'POST',
+    }),
+  authMethods: () => raw<AuthMethods>('/auth/methods', { method: 'GET' }),
+  googleSignInUrl: () => raw<{ url: string }>('/auth/google/url', { method: 'GET' }),
+  googleExchange: (code: string) =>
+    raw<AuthResponse>('/auth/google/exchange', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+  billingStatus: () => raw<BillingStatus>('/billing/status', { method: 'GET' }),
+  checkoutInfo: () => raw<CheckoutInfo>('/billing/checkout', { method: 'GET' }),
+  cancelSubscription: () => raw<BillingStatus>('/billing/cancel', { method: 'POST' }),
+  resumeSubscription: () => raw<BillingStatus>('/billing/resume', { method: 'POST' }),
+  notificationConfig: () => raw<NotificationConfig>('/notifications/config', { method: 'GET' }),
+  subscribePush: (sub: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
+    raw<{ subscribed: boolean }>('/notifications/push', {
+      method: 'POST',
+      body: JSON.stringify(sub),
+    }),
+  unsubscribePush: (endpoint: string) =>
+    raw<{ unsubscribed: boolean }>('/notifications/push', {
+      method: 'DELETE',
+      body: JSON.stringify({ endpoint }),
+    }),
+  adConfig: () => raw<AdConfig>('/ads/config', { method: 'GET' }),
+  adminCampaigns: () => raw<Campaign[]>('/admin/ads', { method: 'GET' }),
+  adminCreateCampaign: (input: CampaignInput) =>
+    raw<Campaign>('/admin/ads', { method: 'POST', body: JSON.stringify(input) }),
+  adminUpdateCampaign: (id: string, input: CampaignInput) =>
+    raw<Campaign>(`/admin/ads/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  adminDeleteCampaign: (id: string) =>
+    raw<{ deleted: true }>(`/admin/ads/${id}`, { method: 'DELETE' }),
+  nextAd: (placement: 'interstitial' | 'inline') =>
+    raw<{ ad: ServedAd | null }>(`/ads/next?placement=${placement}`, { method: 'GET' }),
+  adClick: (id: string) => raw<{ targetUrl: string }>(`/ads/${id}/click`, { method: 'POST' }),
+
   importIcs: (calendarId: string, ics: string) =>
-    raw<{ imported: number }>(`/calendars/${calendarId}/import.ics`, { method: 'POST', body: JSON.stringify({ ics }) }),
+    raw<{ imported: number }>(`/calendars/${calendarId}/import.ics`, {
+      method: 'POST',
+      body: JSON.stringify({ ics }),
+    }),
 };
 
 export function icsExportUrl(calendarId: string): string {

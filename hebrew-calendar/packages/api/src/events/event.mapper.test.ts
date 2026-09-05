@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import type { Event as DbEvent } from '@prisma/client';
+import { describe, expect, it } from 'vitest';
 import { canonicalToEventData, eventToCanonical } from './event.mapper';
 
 function dbEvent(over: Partial<DbEvent> = {}): DbEvent {

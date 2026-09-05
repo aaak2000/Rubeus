@@ -1,10 +1,21 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthUser } from '../auth/dto';
-import { EventsService } from './events.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateEventDto, UpdateEventDto } from './dto';
+import { EventsService } from './events.service';
 
 @ApiTags('events')
 @ApiBearerAuth()
@@ -26,7 +37,11 @@ export class EventsController {
   }
 
   @Post()
-  create(@CurrentUser() user: AuthUser, @Param('calendarId') calendarId: string, @Body() dto: CreateEventDto) {
+  create(
+    @CurrentUser() user: AuthUser,
+    @Param('calendarId') calendarId: string,
+    @Body() dto: CreateEventDto,
+  ) {
     return this.events.create(user.userId, calendarId, dto);
   }
 
@@ -41,7 +56,11 @@ export class EventsController {
   }
 
   @Delete(':id')
-  remove(@CurrentUser() user: AuthUser, @Param('calendarId') calendarId: string, @Param('id') id: string) {
+  remove(
+    @CurrentUser() user: AuthUser,
+    @Param('calendarId') calendarId: string,
+    @Param('id') id: string,
+  ) {
     return this.events.remove(user.userId, calendarId, id);
   }
 }

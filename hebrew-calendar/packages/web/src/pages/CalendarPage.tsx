@@ -1,174 +1,270 @@
-import { useEffect, useMemo, useState } from 'react';
-import { api, type Calendar, type EventInstance } from '../api/client';
-import { buildMonthGrid, HEBREW_WEEKDAYS, zmanimFor, type GridDay } from '../hebrew';
+import { type GeoPoint, localTimeZone, zonedDateKey } from '@hcal/core';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAds } from '../ads';
+import { ApiError, api, type Calendar, type EventInstance } from '../api/client';
+import { CalendarHeader } from '../components/CalendarHeader';
+import { DayDrawer } from '../components/DayDrawer';
 import { EventModal } from '../components/EventModal';
+import {
+  buildMonthGrid,
+  buildRange,
+  buildWeek,
+  GREGORIAN_MONTHS_HE,
+  type GridDay,
+  hebrewMonthSpan,
+  hebrewRangeLabel,
+} from '../hebrew';
+import { useToast } from '../ui';
+import { AgendaView } from '../views/AgendaView';
+import { HebrewYearView } from '../views/HebrewYearView';
+import { MonthView } from '../views/MonthView';
+import type { ViewMode } from '../views/types';
+import { WeekView } from '../views/WeekView';
 
-const GREG_MONTHS = [
-  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
-];
+const AGENDA_DAYS = 45;
+
+function todayIsoIn(tz: string): string {
+  return zonedDateKey(new Date(), tz);
+}
 
 export function CalendarPage() {
-  const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
+  const toast = useToast();
+  const { setLocation } = useAds();
+  const [tzid, setTzid] = useState<string>(localTimeZone());
+  const [anchor, setAnchor] = useState<string>(() => todayIsoIn(localTimeZone()));
+  const [view, setView] = useState<ViewMode>(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches
+      ? 'agenda'
+      : 'month',
+  );
+
   const [calendars, setCalendars] = useState<Calendar[]>([]);
-  const [calendarId, setCalendarId] = useState<string>('');
+  const [calendarId, setCalendarId] = useState('');
   const [events, setEvents] = useState<EventInstance[]>([]);
   const [il, setIl] = useState(false);
-  const [modalDate, setModalDate] = useState<string | null>(null);
-  const [geo, setGeo] = useState<{ lat: number; lon: number; tzid: string } | null>(null);
+  const [geo, setGeo] = useState<GeoPoint | null>(null);
+  const [loading, setLoading] = useState(true);
+
   const [selected, setSelected] = useState<string | null>(null);
+  const [creatingOn, setCreatingOn] = useState<string | null>(null);
+  const [editing, setEditing] = useState<EventInstance | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
-  const grid = useMemo<GridDay[]>(() => buildMonthGrid(year, month, il), [year, month, il]);
+  const anchorYear = Number(anchor.slice(0, 4));
+  const anchorMonth = Number(anchor.slice(5, 7));
+
+  // The days each view needs. Kept in one place so the event query and the
+  // rendered grid can never disagree about the window.
+  const days = useMemo<GridDay[]>(() => {
+    if (view === 'week') return buildWeek(anchor, il, tzid);
+    if (view === 'agenda') return buildRange(anchor, AGENDA_DAYS, il, tzid);
+    return buildMonthGrid(anchorYear, anchorMonth, il, tzid);
+  }, [view, anchor, anchorYear, anchorMonth, il, tzid]);
 
   useEffect(() => {
-    api.calendars().then((cals) => {
-      setCalendars(cals);
-      const def = cals.find((c) => c.isDefault) ?? cals[0];
-      if (def) setCalendarId(def.id);
-    });
-    api.profile().then((p) => {
-      if (p.settings) {
-        setIl(p.settings.il);
-        if (p.settings.latitude != null && p.settings.longitude != null) {
-          setGeo({ lat: p.settings.latitude, lon: p.settings.longitude, tzid: p.settings.tzid });
+    let cancelled = false;
+    Promise.all([api.calendars(), api.profile()])
+      .then(([cals, profile]) => {
+        if (cancelled) return;
+        setCalendars(cals);
+        const def = cals.find((c) => c.isDefault) ?? cals[0];
+        if (def) setCalendarId(def.id);
+        if (profile.settings) {
+          setIl(profile.settings.il);
+          if (profile.settings.tzid) setTzid(profile.settings.tzid);
+          const { latitude, longitude, tzid: t } = profile.settings;
+          if (latitude != null && longitude != null) {
+            const point = { latitude, longitude, tzid: t, il: profile.settings.il };
+            setGeo(point);
+            // The Shabbat gate needs the location to know when the day turns.
+            setLocation(point, profile.settings.il);
+          }
         }
-      }
-    });
-  }, []);
+      })
+      .catch(() => toast.error('טעינת היומנים נכשלה'));
+    return () => {
+      cancelled = true;
+    };
+  }, [toast, setLocation]);
+
+  const loadEvents = useCallback(async () => {
+    if (!calendarId || days.length === 0) return;
+    setLoading(true);
+    try {
+      const start = `${days[0]!.iso}T00:00:00Z`;
+      const end = `${days[days.length - 1]!.iso}T23:59:59Z`;
+      setEvents(await api.events(calendarId, start, end));
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'טעינת האירועים נכשלה');
+    } finally {
+      setLoading(false);
+    }
+  }, [calendarId, days, toast]);
 
   useEffect(() => {
-    if (!calendarId) return;
-    const start = `${grid[0]!.iso}T00:00:00Z`;
-    const end = `${grid[grid.length - 1]!.iso}T23:59:59Z`;
-    api.events(calendarId, start, end).then(setEvents);
-  }, [calendarId, grid]);
+    void loadEvents();
+  }, [loadEvents]);
 
+  // Group by the day the server filed each event under. On a Hebrew calendar
+  // that is the sunset-bounded day, so an event at 21:00 shows on the date it
+  // actually belongs to rather than the one its clock happens to read.
   const eventsByDate = useMemo(() => {
     const map = new Map<string, EventInstance[]>();
     for (const e of events) {
-      const d = e.start.slice(0, 10);
-      const arr = map.get(d) ?? [];
+      const key = e.hebrewDay ?? e.localDate;
+      const arr = map.get(key) ?? [];
       arr.push(e);
-      map.set(d, arr);
+      map.set(key, arr);
     }
     return map;
   }, [events]);
 
-  function prevMonth() {
-    if (month === 1) {
-      setYear(year - 1);
-      setMonth(12);
-    } else setMonth(month - 1);
-  }
-  function nextMonth() {
-    if (month === 12) {
-      setYear(year + 1);
-      setMonth(1);
-    } else setMonth(month + 1);
-  }
+  const shift = useCallback(
+    (direction: -1 | 1) => {
+      const d = new Date(`${anchor}T00:00:00`);
+      if (view === 'month' || view === 'year') d.setMonth(d.getMonth() + direction);
+      else if (view === 'week') d.setDate(d.getDate() + 7 * direction);
+      else d.setDate(d.getDate() + AGENDA_DAYS * direction);
+      setAnchor(zonedDateKey(new Date(d.getTime() - d.getTimezoneOffset() * 60000), 'UTC'));
+    },
+    [anchor, view],
+  );
 
-  function refresh() {
-    setModalDate(null);
+  const goToday = useCallback(() => {
+    const t = todayIsoIn(tzid);
+    setAnchor(t);
+    setSelected(t);
+  }, [tzid]);
+
+  // Keyboard shortcuts, ignored while typing or with a modifier held.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const el = e.target as HTMLElement | null;
+      if (el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const map: Record<string, ViewMode> = { m: 'month', w: 'week', a: 'agenda', y: 'year' };
+      const key = e.key.toLowerCase();
+      if (key === 't') {
+        e.preventDefault();
+        goToday();
+      } else if (map[key]) {
+        e.preventDefault();
+        setView(map[key]!);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [goToday]);
+
+  async function syncNow() {
     if (!calendarId) return;
-    const start = `${grid[0]!.iso}T00:00:00Z`;
-    const end = `${grid[grid.length - 1]!.iso}T23:59:59Z`;
-    api.events(calendarId, start, end).then(setEvents);
+    setSyncing(true);
+    try {
+      const r = await api.sync(calendarId);
+      const pulled = r.pulledCreated + r.pulledUpdated + r.pulledDeleted;
+      const pushed = r.pushedCreated + r.pushedUpdated + r.pushedDeleted;
+      toast.success(`הסנכרון הושלם — נמשכו ${pulled}, נדחפו ${pushed}`);
+      if (r.errors.length > 0) toast.error(`${r.errors.length} פריטים נכשלו בסנכרון`);
+      await loadEvents();
+    } catch (err) {
+      // A failure here used to be swallowed silently.
+      toast.error(err instanceof ApiError ? err.message : 'הסנכרון נכשל');
+    } finally {
+      setSyncing(false);
+    }
   }
 
-  const zmanim = useMemo(() => {
-    if (!selected || !geo) return null;
-    return zmanimFor(selected, { latitude: geo.lat, longitude: geo.lon, tzid: geo.tzid, il });
-  }, [selected, geo, il]);
+  function afterSave() {
+    setCreatingOn(null);
+    setEditing(null);
+    void loadEvents();
+  }
+
+  const selectedDay = selected ? days.find((d) => d.iso === selected) : undefined;
+  const selectedCalendar = calendars.find((c) => c.id === calendarId);
+  const hebrewLabel = hebrewRangeLabel(days.length ? days : []);
+  const gregorianLabel =
+    view === 'week'
+      ? `${days[0]?.dayOfMonth ?? ''}–${days[6]?.dayOfMonth ?? ''} ב${GREGORIAN_MONTHS_HE[anchorMonth - 1]} ${anchorYear}`
+      : `${GREGORIAN_MONTHS_HE[anchorMonth - 1]} ${anchorYear}`;
+
+  const viewProps = {
+    days,
+    eventsByDate,
+    selected,
+    onSelect: setSelected,
+    onCreate: setCreatingOn,
+    onOpenEvent: setEditing,
+  };
 
   return (
     <div className="calendar-page">
-      <div className="cal-toolbar">
-        <div className="nav">
-          <button onClick={nextMonth}>‹</button>
-          <h2>
-            {GREG_MONTHS[month - 1]} {year}
-          </h2>
-          <button onClick={prevMonth}>›</button>
-        </div>
-        <div className="cal-controls">
-          {calendars.length > 1 && (
-            <select value={calendarId} onChange={(e) => setCalendarId(e.target.value)}>
-              {calendars.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          )}
-          <label className="row">
-            <input type="checkbox" checked={il} onChange={(e) => setIl(e.target.checked)} /> לוח א״י
-          </label>
-        </div>
-      </div>
+      <CalendarHeader
+        hebrewLabel={hebrewLabel}
+        gregorianLabel={gregorianLabel}
+        view={view}
+        onViewChange={setView}
+        onPrev={() => shift(-1)}
+        onNext={() => shift(1)}
+        onToday={goToday}
+        calendars={calendars}
+        calendarId={calendarId}
+        onCalendarChange={setCalendarId}
+        syncing={syncing}
+        canSync={Boolean(selectedCalendar?.connectionId)}
+        onSync={syncNow}
+      />
 
-      <div className="weekdays">
-        {HEBREW_WEEKDAYS.map((d) => (
-          <div key={d} className="weekday">
-            {d}
-          </div>
-        ))}
-      </div>
-
-      <div className="month-grid">
-        {grid.map((day) => {
-          const evs = eventsByDate.get(day.iso) ?? [];
-          return (
-            <div
-              key={day.iso}
-              className={`day${day.inMonth ? '' : ' out'}${day.isToday ? ' today' : ''}${selected === day.iso ? ' selected' : ''}`}
-              onClick={() => setSelected(day.iso)}
-              onDoubleClick={() => setModalDate(day.iso)}
-            >
-              <div className="day-head">
-                <span className="greg">{Number(day.iso.slice(8, 10))}</span>
-                <span className="heb">{day.hebrewDay}</span>
-              </div>
-              {day.holidays.map((h, i) => (
-                <div key={i} className={`chip holiday ${h.categories[0] ?? ''}`} title={h.titleHe}>
-                  {h.emoji ?? ''} {h.titleHe}
-                </div>
-              ))}
-              {evs.map((e) => (
-                <div key={e.id + e.start} className={`chip event${e.isOccurrence ? ' occ' : ''}`} title={e.title}>
-                  {e.isOccurrence ? '🕯️ ' : ''}
-                  {e.title}
-                </div>
-              ))}
-              <button className="add-day" onClick={(ev) => { ev.stopPropagation(); setModalDate(day.iso); }}>
-                +
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
-      {selected && (
-        <div className="day-detail card">
-          <h3>פרטי היום — {selected}</h3>
-          {zmanim ? (
-            <ul className="zmanim">
-              {Object.entries(zmanim.times).map(([k, v]) => (
-                <li key={k}>
-                  <span className="zk">{k}</span>
-                  <span className="zv">{v ?? '—'}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="muted">להצגת זמני היום, הגדירו מיקום ב<b>הגדרות</b>.</p>
+      <div className={`calendar-body${selectedDay ? ' has-drawer' : ''}`}>
+        <div className="calendar-main">
+          {view === 'month' && <MonthView {...viewProps} loading={loading} />}
+          {view === 'week' && <WeekView {...viewProps} tzid={tzid} />}
+          {view === 'agenda' && <AgendaView {...viewProps} tzid={tzid} />}
+          {view === 'year' && (
+            <HebrewYearView
+              hebrewYear={days[0]?.hebrewYear ?? 5786}
+              selected={selected}
+              onSelectMonth={(m) => {
+                const span = hebrewMonthSpan(days[0]?.hebrewYear ?? 5786, m);
+                setAnchor(span.startIso);
+                setView('month');
+              }}
+            />
           )}
         </div>
+
+        {selectedDay && (
+          <DayDrawer
+            day={selectedDay}
+            events={eventsByDate.get(selectedDay.iso) ?? []}
+            geo={geo}
+            tzid={tzid}
+            onClose={() => setSelected(null)}
+            onCreate={setCreatingOn}
+            onOpenEvent={setEditing}
+          />
+        )}
+      </div>
+
+      {creatingOn && calendarId && (
+        <EventModal
+          calendarId={calendarId}
+          dateIso={creatingOn}
+          tzid={tzid}
+          geo={geo}
+          onClose={() => setCreatingOn(null)}
+          onSaved={afterSave}
+        />
       )}
-
-      {modalDate && calendarId && (
-        <EventModal calendarId={calendarId} dateIso={modalDate} onClose={() => setModalDate(null)} onCreated={refresh} />
+      {editing && calendarId && (
+        <EventModal
+          calendarId={calendarId}
+          event={editing}
+          tzid={tzid}
+          geo={geo}
+          onClose={() => setEditing(null)}
+          onSaved={afterSave}
+        />
       )}
     </div>
   );

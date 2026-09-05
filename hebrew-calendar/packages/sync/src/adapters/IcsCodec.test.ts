@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { IcsCodec } from './IcsCodec.js';
 import type { CanonicalEvent } from '../types.js';
+import { IcsCodec } from './IcsCodec.js';
 
 const codec = new IcsCodec();
 

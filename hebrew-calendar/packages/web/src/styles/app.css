@@ -1,0 +1,658 @@
+/* Application layout: shell, calendar views, drawer, and pages. */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--primary);
+  font: inherit;
+  font-weight: 550;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+a { color: var(--primary); text-underline-offset: 2px; }
+.error { color: var(--danger); font-size: var(--text-sm); }
+.field-hint { font-size: var(--text-xs); color: var(--ink-subtle); }
+.notice {
+  padding: var(--space-2) var(--space-3);
+  background: var(--holiday-tint);
+  color: var(--holiday-tint-ink);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+.row-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+
+/* --- shell --- */
+.app-shell { display: flex; flex-direction: column; min-height: 100%; }
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-lg);
+  letter-spacing: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.brand-logo { color: var(--primary); flex: none; }
+.topbar nav { display: flex; gap: var(--space-1); }
+.topbar nav a {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-weight: 550;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+.topbar nav a:hover { background: var(--surface-hover); color: var(--ink); }
+.topbar nav a[aria-current='page'] { background: var(--primary-tint); color: var(--primary-tint-ink); }
+/* On a phone the bar has more in it than fits on one line. Let the nav take
+   its own row rather than pushing the sign-out control off the screen, and
+   tighten the padding that buys the space back. */
+@media (max-width: 620px) {
+  .topbar { flex-wrap: wrap; padding: var(--space-2) var(--space-3); gap: var(--space-2); row-gap: var(--space-2); }
+  .topbar nav { order: 3; flex: 1 0 100%; justify-content: center; }
+  .topbar nav a { flex: 1; justify-content: center; padding: var(--space-1) var(--space-2); }
+  .brand { font-size: var(--text-base); }
+}
+main { flex: 1; padding: var(--space-5); max-width: 1240px; width: 100%; margin: 0 auto; }
+.boot-loading { display: grid; gap: var(--space-4); padding: var(--space-6); }
+
+/* --- auth --- */
+.auth-page { min-height: 100vh; display: grid; place-items: center; padding: var(--space-5); position: relative; }
+.auth-corner { position: absolute; top: var(--space-5); inset-inline-start: var(--space-5); }
+.auth-card { width: min(400px, 100%); display: grid; gap: var(--space-5); box-shadow: var(--shadow-md); }
+.auth-brand { display: grid; gap: var(--space-1); text-align: center; }
+.auth-mark { display: flex; justify-content: center; }
+.auth-brand h1 { font-family: var(--font-display); letter-spacing: 0; }
+.brand-tagline {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--holiday);
+}
+.auth-switch { text-align: center; color: var(--ink-muted); }
+.auth-footer { position: absolute; bottom: var(--space-5); }
+
+/* --- calendar header --- */
+.cal-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.cal-title-block { display: flex; align-items: center; gap: var(--space-3); }
+.cal-nav { display: flex; gap: var(--space-1); }
+.cal-titles { display: grid; }
+.cal-hebrew { font-size: var(--text-2xl); font-weight: 700; letter-spacing: -0.02em; }
+.cal-gregorian { margin-top: -2px; }
+.cal-actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.cal-select select { min-width: 150px; }
+
+.view-switch {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.view-option {
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 550;
+  padding: var(--space-1) var(--space-3);
+  min-height: 30px;
+  border-radius: calc(var(--radius-md) - 3px);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.view-option:hover { color: var(--ink); }
+.view-option.is-active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
+
+/* --- calendar body / drawer split --- */
+.calendar-body { display: grid; grid-template-columns: 1fr; gap: var(--space-4); align-items: start; }
+.calendar-body.has-drawer { grid-template-columns: minmax(0, 1fr) 340px; }
+.calendar-main { min-width: 0; }
+
+/* --- month view --- */
+.weekday-row,
+.month-grid,
+.month-skeleton {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.weekday-row { margin-bottom: var(--space-2); }
+.weekday {
+  text-align: center;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-muted);
+  padding: var(--space-1) 0;
+}
+.weekday.is-shabbat { color: var(--primary); }
+.weekday-short { display: none; }
+
+.day-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 104px;
+  padding: var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.day-cell:hover { background: var(--surface-hover); }
+.day-cell.is-outside { opacity: 0.5; }
+.day-cell.is-rest { background: var(--shabbat-wash); }
+.day-cell.is-today { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.day-cell.is-selected { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+
+.day-numbers { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+.day-hebrew { font-weight: 700; font-size: var(--text-sm); color: var(--ink); }
+.day-greg { font-size: var(--text-xs); color: var(--ink-subtle); font-variant-numeric: tabular-nums; }
+.is-today .day-hebrew { color: var(--primary); }
+
+.day-chips { display: grid; gap: 2px; min-width: 0; }
+.chip {
+  display: block;
+  width: 100%;
+  text-align: start;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  border: none;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip-holiday { background: var(--holiday-tint); color: var(--holiday-tint-ink); font-weight: 550; }
+.chip-holiday.is-parasha { background: transparent; color: var(--ink-subtle); font-weight: 500; padding-inline: var(--space-1); }
+.chip-event { background: var(--primary-tint); color: var(--primary-tint-ink); cursor: pointer; font-weight: 550; }
+.chip-event.is-occurrence { background: var(--recurrence-tint); color: var(--recurrence-tint-ink); }
+.chip-event:hover { filter: brightness(0.97); }
+.chip-more { background: transparent; color: var(--ink-muted); cursor: pointer; font-weight: 550; }
+
+.day-add {
+  position: absolute;
+  bottom: 4px;
+  inset-inline-start: 4px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+.day-cell:hover .day-add,
+.day-add:focus-visible { opacity: 1; }
+
+/* --- week view --- */
+.week-view { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
+.week-head { display: grid; grid-template-columns: 56px repeat(7, minmax(0, 1fr)); border-bottom: 1px solid var(--border); }
+.week-day-head {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2);
+  background: transparent;
+  border: none;
+  border-inline-start: 1px solid var(--border);
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+  min-height: 64px;
+}
+.week-day-head.is-rest { background: var(--shabbat-wash); }
+.week-day-head.is-today .day-hebrew { color: var(--primary); }
+.week-day-head.is-selected { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.week-day-name { font-size: var(--text-sm); font-weight: 600; color: var(--ink-muted); }
+.week-day-nums { display: flex; gap: var(--space-2); justify-content: center; align-items: baseline; }
+.week-day-chips { display: grid; gap: 2px; }
+
+.week-body { display: grid; grid-template-columns: 56px repeat(7, minmax(0, 1fr)); max-height: 62vh; overflow-y: auto; }
+.week-gutter { display: grid; }
+.hour-label {
+  height: var(--slot-px);
+  font-size: var(--text-xs);
+  color: var(--ink-subtle);
+  text-align: center;
+  padding-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.week-column { position: relative; border-inline-start: 1px solid var(--border); }
+.week-column.is-rest { background: var(--shabbat-wash); }
+.hour-slot { height: var(--slot-px); border-bottom: 1px solid var(--border); }
+.week-event {
+  position: absolute;
+  inset-inline: 3px;
+  display: grid;
+  align-content: start;
+  gap: 1px;
+  padding: 2px var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--primary-tint);
+  color: var(--primary-tint-ink);
+  font: inherit;
+  font-size: var(--text-xs);
+  text-align: start;
+  cursor: pointer;
+  overflow: hidden;
+}
+.week-event.is-occurrence { background: var(--recurrence-tint); color: var(--recurrence-tint-ink); }
+.week-event-time { font-variant-numeric: tabular-nums; opacity: 0.85; }
+.week-event-title { font-weight: 600; }
+
+/* --- agenda view --- */
+.agenda { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.agenda-day {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.agenda-day.is-rest { background: var(--shabbat-wash); }
+.agenda-day.is-today { border-color: var(--primary); }
+.agenda-date {
+  display: grid;
+  gap: 1px;
+  align-content: start;
+  justify-items: start;
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  padding: 0;
+}
+.agenda-hebrew { font-weight: 700; }
+.agenda-greg { font-size: var(--text-sm); color: var(--ink-muted); }
+.agenda-today-badge {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--primary-tint);
+  color: var(--primary-tint-ink);
+}
+.agenda-items { display: grid; gap: 2px; align-content: start; }
+.agenda-item {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  text-align: start;
+  color: var(--ink);
+}
+.agenda-item.is-event { cursor: pointer; }
+.agenda-item.is-event:hover { background: var(--surface-hover); }
+.agenda-item.is-holiday .agenda-title { color: var(--holiday); font-weight: 600; }
+.agenda-item.is-occurrence .agenda-title { color: var(--recurrence-tint-ink); }
+.agenda-time { font-size: var(--text-sm); color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.agenda-location { font-size: var(--text-xs); color: var(--ink-subtle); }
+.agenda-add {
+  justify-self: start;
+  background: none;
+  border: none;
+  color: var(--ink-subtle);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.agenda-add:hover { color: var(--primary); background: var(--surface-hover); }
+
+/* --- Hebrew year view --- */
+.year-caption { margin-bottom: var(--space-3); }
+.year-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
+.year-month {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font: inherit;
+  text-align: start;
+  transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+.year-month:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+.year-month.is-current { border-color: var(--primary); background: var(--primary-tint); }
+.year-month-name { font-weight: 700; font-size: var(--text-lg); }
+.year-month-meta { font-size: var(--text-sm); color: var(--ink-muted); }
+.year-month-greg { font-size: var(--text-xs); color: var(--ink-subtle); font-variant-numeric: tabular-nums; }
+
+/* --- day drawer --- */
+.day-drawer {
+  position: sticky;
+  top: 76px;
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+.drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
+.drawer-hebrew { font-size: var(--text-lg); font-weight: 700; }
+.drawer-section { display: grid; gap: var(--space-2); }
+.drawer-title { font-size: var(--text-sm); font-weight: 650; color: var(--ink-muted); }
+.drawer-title-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.drawer-holidays { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.drawer-holidays li { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
+.holiday-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--holiday); flex: 0 0 auto; }
+.holiday-time { margin-inline-start: auto; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.drawer-events { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.drawer-event {
+  width: 100%;
+  display: grid;
+  gap: 1px;
+  padding: var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.drawer-event:hover { background: var(--surface-hover); }
+.drawer-event-time { font-size: var(--text-xs); color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.drawer-event-title { font-weight: 600; font-size: var(--text-sm); }
+
+.zmanim-list { display: grid; gap: 1px; margin: 0; }
+.zman {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.zman.is-emphasis { background: var(--surface-sunken); }
+.zman dt { display: grid; }
+.zman-label { font-size: var(--text-sm); font-weight: 550; }
+.zman-description { font-size: var(--text-xs); color: var(--ink-subtle); }
+.zman-value { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; font-size: var(--text-sm); }
+.zman.is-emphasis .zman-value { color: var(--primary); }
+
+/* --- settings & prose --- */
+.settings-page { display: grid; gap: var(--space-4); max-width: 720px; }
+.connection-list, .linked-list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.connection-list li, .linked-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+.connection-name, .calendar-name { font-weight: 600; flex: 1; }
+.calendar-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.file-button { cursor: pointer; }
+.prose-page { max-width: 720px; margin: 0 auto; }
+.prose-page h1 { margin-bottom: var(--space-2); }
+.prose-page h2 { font-size: var(--text-lg); margin-top: var(--space-5); margin-bottom: var(--space-2); }
+.prose-page p, .prose-page li { color: var(--ink-muted); }
+.prose-page ul { display: grid; gap: var(--space-1); padding-inline-start: var(--space-5); }
+
+/* --- responsive --- */
+@media (max-width: 1040px) {
+  .calendar-body.has-drawer { grid-template-columns: 1fr; }
+  .day-drawer { position: static; max-height: none; }
+}
+
+@media (max-width: 720px) {
+  main { padding: var(--space-3); }
+  .topbar { padding: var(--space-2) var(--space-3); gap: var(--space-2); }
+  .topbar-user { display: none; }
+  .cal-hebrew { font-size: var(--text-xl); }
+  .weekday-long { display: none; }
+  .weekday-short { display: inline; }
+  .day-cell { min-height: 76px; padding: var(--space-1); }
+  .day-add { opacity: 1; }
+  .agenda-day { grid-template-columns: 1fr; gap: var(--space-2); }
+  .agenda-item { grid-template-columns: 68px minmax(0, 1fr); }
+  .week-head, .week-body { grid-template-columns: 44px repeat(7, minmax(0, 1fr)); }
+  .view-option { padding: var(--space-1) var(--space-2); }
+}
+
+/* --- advertising ---------------------------------------------------------
+   Ads are labelled, kept visually quieter than the app's own content, and
+   never allowed to shift layout as they load. */
+
+.ad-badge {
+  font-size: var(--text-xs);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  color: var(--ink-subtle);
+  border: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+/* inline slot */
+.ad-inline {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding: var(--space-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  /* Reserve space up front so nothing jumps when the ad arrives. */
+  min-height: 96px;
+}
+.ad-inline-body { display: flex; gap: var(--space-3); align-items: center; text-decoration: none; color: inherit; width: 100%; }
+.ad-inline-image { width: 56px; height: 56px; object-fit: cover; border-radius: var(--radius-sm); flex: 0 0 auto; }
+.ad-inline-text { display: grid; gap: 1px; min-width: 0; }
+.ad-inline-title { font-weight: 600; font-size: var(--text-sm); }
+.ad-inline-sub { font-size: var(--text-xs); color: var(--ink-muted); }
+.ad-inline-advertiser { font-size: var(--text-xs); color: var(--ink-subtle); }
+.ad-inline-network { width: 100%; min-height: 60px; }
+.ad-inline-empty { margin: auto; }
+
+/* interstitial */
+.ad-interstitial-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgba(8, 10, 14, 0.62);
+  backdrop-filter: blur(3px);
+  animation: fade var(--dur) var(--ease);
+}
+.ad-interstitial {
+  width: min(420px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  animation: rise var(--dur) var(--ease);
+}
+.ad-head { display: flex; align-items: center; gap: var(--space-2); }
+.ad-advertiser { font-size: var(--text-sm); color: var(--ink-muted); }
+.ad-body { display: grid; gap: var(--space-2); justify-items: center; text-align: center; }
+.ad-image { width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-md); }
+.ad-title { font-size: var(--text-xl); }
+.ad-text { color: var(--ink-muted); font-size: var(--text-sm); }
+.ad-foot { display: grid; gap: var(--space-2); justify-items: center; }
+.ad-note { font-size: var(--text-xs); color: var(--ink-subtle); text-align: center; }
+
+/* consent */
+.consent {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 60;
+  padding: var(--space-3);
+  background: var(--surface-raised);
+  border-top: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+}
+.consent-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.consent-title { font-size: var(--text-base); font-weight: 650; }
+.consent-text { font-size: var(--text-sm); color: var(--ink-muted); max-width: 62ch; }
+/* Both choices carry equal visual weight, as the regulator expects. */
+.consent-actions { display: flex; gap: var(--space-2); margin-inline-start: auto; flex-wrap: wrap; }
+
+@media (max-width: 720px) {
+  .consent-actions { margin-inline-start: 0; width: 100%; }
+  .consent-actions .btn { flex: 1; }
+}
+
+/* Placement hint in the event form: which Hebrew day a time lands on. */
+.day-hint{margin:0;padding:var(--space-3) var(--space-4);background:var(--surface-sunken);border:1px solid var(--border);border-radius:var(--radius-md);font-size:13px;line-height:1.6;color:var(--ink-muted)}
+.day-hint b{color:var(--ink);font-weight:650}
+
+/* ---- reminders / yahrzeit register ---- */
+.page{max-width:820px;margin:0 auto}
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-4);margin-bottom:var(--space-5);flex-wrap:wrap}
+.page-head h1{font-size:22px;font-weight:650;margin:0}
+.page-head .muted{margin:var(--space-1) 0 0;font-size:14px}
+.yz-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-3)}
+.yz-card{display:flex;gap:var(--space-4);align-items:stretch;justify-content:space-between;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-4)}
+.yz-card.soon{border-color:var(--primary);background:var(--primary-tint)}
+.yz-main{flex:1 1 200px;text-align:start;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;display:grid;gap:2px;align-content:start;border-radius:var(--radius-sm)}
+.yz-head{display:flex;align-items:baseline;gap:var(--space-2);flex-wrap:wrap}
+.yz-name{font-weight:650;font-size:16px}
+.yz-rel{font-size:12px;color:var(--ink-subtle);border:1px solid var(--border);border-radius:var(--radius-full);padding:0 8px}
+.yz-hname{margin:0;font-size:13px;color:var(--ink-muted)}
+.yz-hdate{margin:2px 0 0;font-size:14px;color:var(--ink)}
+.yz-next{display:grid;gap:2px;align-content:center;justify-items:start;text-align:start;min-width:190px}
+.yz-countdown{font-size:15px;font-weight:650}
+.yz-countdown.soon{color:var(--primary-tint-ink)}
+.yz-when{font-size:13px;color:var(--ink-muted)}
+.yz-candle{font-size:12px;color:var(--ink-subtle)}
+.field-hint{margin:calc(-1 * var(--space-2)) 0 0;font-size:12px;color:var(--ink-subtle);line-height:1.6}
+.chips{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.chip{font:inherit;font-size:13px;min-height:40px;padding:0 var(--space-4);border-radius:var(--radius-full);
+  border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip.on{background:var(--primary);border-color:var(--primary);color:var(--ink-on-accent);font-weight:600}
+@media(max-width:520px){.yz-next{min-width:0}}
+
+/* ---- subscription ---- */
+.sub-price{margin:0;font-size:var(--text-xl)}
+.sub-price strong{font-weight:650}
+.sub-state{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;margin:0}
+.sub-badge{display:inline-block;font-size:var(--text-xs);font-weight:650;padding:2px 10px;border-radius:var(--radius-full);
+  background:var(--recurrence-tint);color:var(--recurrence-tint-ink)}
+
+/* ---- evening events ----
+   An event after sunset belongs to the following Hebrew day. Marking it keeps
+   a 21:00 entry on tomorrow's cell from reading as an error. */
+.chip-evening {
+  background: var(--shabbat-wash);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.chip-eve-mark, .eve-mark {
+  font-size: var(--text-xs); font-weight: 650;
+  color: var(--primary-tint-ink); background: var(--primary-tint);
+  border-radius: var(--radius-sm); padding: 0 4px;
+  margin-inline-end: 4px; flex: none;
+}
+.chip-eve-time { font-size: var(--text-xs); color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+
+/* ---- danger zone ----
+   Set apart because it is the only irreversible control on the page. */
+.danger-zone { border-color: var(--danger, var(--border-strong)); }
+.danger-zone h2 { color: var(--danger, var(--ink)); }
+.row-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+/* --- campaign management (operators only) --- */
+.camp-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-3)}
+.camp-card{display:flex;gap:var(--space-4);align-items:center;justify-content:space-between;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-4)}
+/* A paused campaign stays legible — muted, not hidden: it is still inventory
+   the operator has to reason about. */
+.camp-card.is-paused{background:var(--surface-hover);border-style:dashed}
+.camp-card.is-paused .camp-title,.camp-card.is-paused .camp-advertiser{color:var(--ink-muted)}
+.camp-main{flex:1 1 240px;text-align:start;background:none;border:0;padding:0;font:inherit;color:inherit;
+  cursor:pointer;display:grid;gap:2px;align-content:start;border-radius:var(--radius-sm)}
+.camp-head{display:flex;align-items:baseline;gap:var(--space-2);flex-wrap:wrap}
+.camp-title{font-weight:650;font-size:16px}
+.camp-advertiser{font-size:12px;color:var(--ink-subtle);border:1px solid var(--border);border-radius:var(--radius-full);padding:0 8px}
+.camp-body{margin:2px 0 0;font-size:13px;color:var(--ink-muted)}
+.camp-target{margin:2px 0 0;font-size:12px;color:var(--ink-muted);direction:ltr;text-align:start;
+  overflow-wrap:anywhere}
+.camp-flight{margin:2px 0 0}
+.camp-stats{display:flex;gap:var(--space-4);flex-wrap:wrap;align-items:baseline}
+.camp-stat{font-size:12px;color:var(--ink-muted);display:flex;gap:4px;align-items:baseline}
+.camp-stat strong{font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* --- provider sign-in --- */
+.auth-divider{display:flex;align-items:center;gap:var(--space-3);margin:0;color:var(--ink-subtle);font-size:12px}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.provider-mark{width:18px;height:18px;flex:none}

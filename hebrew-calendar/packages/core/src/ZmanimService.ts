@@ -1,6 +1,6 @@
 import { GeoLocation, Zmanim } from '@hebcal/core';
+import { formatTimeInTz, fromIsoDate, isValidDate } from './dateUtils.js';
 import type { GeoPoint } from './types.js';
-import { fromIsoDate, formatTimeInTz, isValidDate } from './dateUtils.js';
 
 /** A set of halachic times for one day at one location, as HH:MM wall-clock. */
 export interface DailyZmanim {
@@ -53,6 +53,50 @@ export class ZmanimService {
       times[key] = value;
     }
     return { date: iso, tzid: location.tzid, times };
+  }
+
+  /**
+   * The sunset instant for a Gregorian date at a location, or null when it
+   * cannot be computed (polar day/night). Used to determine the Hebrew day
+   * boundary, which falls at sunset rather than midnight.
+   */
+  sunsetInstant(iso: string, location: GeoPoint, useElevation = false): Date | null {
+    try {
+      const zmanim = new Zmanim(toGeoLocation(location), fromIsoDate(iso), useElevation);
+      const d = zmanim.sunset();
+      return isValidDate(d) ? d : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * The candle-lighting instant for a date, or null when it cannot be computed.
+   * Unlike {@link candleLighting} this returns the instant itself, which is what
+   * a comparison against "now" needs.
+   */
+  candleLightingInstant(iso: string, location: GeoPoint, minutesBefore = 18): Date | null {
+    try {
+      const zmanim = new Zmanim(toGeoLocation(location), fromIsoDate(iso), false);
+      const d = zmanim.sunsetOffset(-minutesBefore, true);
+      return isValidDate(d) ? d : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Nightfall (tzeit hakochavim) as an instant — the end of the halachic day,
+   * and so the end of Shabbat or a festival.
+   */
+  nightfallInstant(iso: string, location: GeoPoint): Date | null {
+    try {
+      const zmanim = new Zmanim(toGeoLocation(location), fromIsoDate(iso), false);
+      const d = zmanim.tzeit();
+      return isValidDate(d) ? d : null;
+    } catch {
+      return null;
+    }
   }
 
   /**

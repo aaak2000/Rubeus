@@ -8,7 +8,13 @@ function toDateArray(iso: string, allDay: boolean): DateArray {
   if (allDay) {
     return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()];
   }
-  return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes()];
+  return [
+    d.getUTCFullYear(),
+    d.getUTCMonth() + 1,
+    d.getUTCDate(),
+    d.getUTCHours(),
+    d.getUTCMinutes(),
+  ];
 }
 
 /**
@@ -28,7 +34,8 @@ export class IcsCodec {
       const ev = new ICAL.Event(ve);
       const allDay = ev.startDate.isDate;
       const rrule = ve.getFirstPropertyValue('rrule');
-      const lastMod = ve.getFirstPropertyValue('last-modified') ?? ve.getFirstPropertyValue('dtstamp');
+      const lastMod =
+        ve.getFirstPropertyValue('last-modified') ?? ve.getFirstPropertyValue('dtstamp');
       const out: CanonicalEvent = {
         uid: ev.uid || cryptoRandomId(),
         title: ev.summary || '',
@@ -73,7 +80,7 @@ export class IcsCodec {
 }
 
 function cryptoRandomId(): string {
-  return 'hcal-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  return `hcal-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
 }
 
 export const icsCodec = new IcsCodec();

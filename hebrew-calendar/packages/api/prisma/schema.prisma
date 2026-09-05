@@ -23,27 +23,111 @@ enum HebrewRecurrenceKind {
 model User {
   id           String               @id @default(cuid())
   email        String               @unique
-  passwordHash String
+  /// Null for an account that only ever signed in through a provider. Such an
+  /// account has no password to compare, which `login` already handles.
+  passwordHash String?
   displayName  String?
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
   settings     UserSettings?
   calendars    Calendar[]
   connections  ProviderConnection[]
+  refreshTokens RefreshToken[]
+  yahrzeits    Yahrzeit[]
+  pushSubscriptions PushSubscription[]
+  subscription Subscription?
+  identities   AuthIdentity[]
+  loginCodes   LoginCode[]
+}
+
+/// A provider account that may sign in as this user.
+///
+/// Deliberately separate from ProviderConnection: that stores calendar tokens
+/// for syncing, this decides who someone is. Conflating them would mean
+/// disconnecting a calendar could lock somebody out of their account.
+model AuthIdentity {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// "google" today. A string rather than an enum so a second provider is a
+  /// code change and not a migration.
+  provider String
+  /// The provider's stable subject id — not the email, which people change.
+  providerAccountId String
+  /// The address the provider reported, kept for support and display only.
+  email     String?
+  createdAt DateTime @default(now())
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+/// A single-use code handed to the browser after a provider sign-in.
+///
+/// The alternative is putting the token pair in the redirect URL, where it
+/// lands in browser history, referrer headers and any proxy log on the way.
+/// This code is worth one exchange, for two minutes, and nothing after that.
+model LoginCode {
+  id String @id @default(cuid())
+  /// SHA-256 of the code; the code itself is never persisted.
+  codeHash  String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([expiresAt])
+}
+
+/// A issued refresh token, stored only as a hash so a database read cannot
+/// mint sessions. Rotated on every use and revocable on sign-out.
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 of the token; the token itself is never persisted.
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  /// Set when this token was rotated, pointing at its replacement.
+  replacedById String?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 /// Per-user preferences, including the location used for zmanim.
+/// Where the user's day starts. The Hebrew day begins at sunset, so `sunset`
+/// files an evening event under the following Hebrew date — which is what the
+/// date on a Hebrew calendar actually means. `midnight` is offered for people
+/// who would rather see the civil day.
+enum DayBoundary {
+  midnight
+  sunset
+}
+
 model UserSettings {
-  id            String  @id @default(cuid())
-  userId        String  @unique
-  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  il            Boolean @default(false)
+  id            String      @id @default(cuid())
+  userId        String      @unique
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  il            Boolean     @default(false)
   latitude      Float?
   longitude     Float?
-  tzid          String  @default("Asia/Jerusalem")
+  tzid          String      @default("Asia/Jerusalem")
   elevation     Float?
-  candleMinutes Int     @default(18)
-  locale        String  @default("he")
+  candleMinutes Int         @default(18)
+  locale        String      @default("he")
+  dayBoundary   DayBoundary @default(sunset)
+
+  /// Whether reminders may be sent by email. Push is opted into per device and
+  /// so needs no flag here; email has no such moment, and sending it to
+  /// everyone who happens to have a record is not a choice the user made.
+  emailReminders Boolean @default(true)
+  /// Local hour (0-23) at which reminders should arrive, in the user's own
+  /// timezone. A single UTC hour lands late at night outside Israel.
+  reminderHour   Int     @default(9)
 }
 
 model Calendar {
@@ -128,4 +212,162 @@ model SyncState {
   updatedAt  DateTime @updatedAt
 
   @@unique([calendarId])
+}
+
+/// Where an ad may be shown. Interstitials carry house inventory only —
+/// Google requires its own tags for interstitial formats, so third-party
+/// network creatives are never wrapped in our dialog.
+enum AdPlacement {
+  interstitial
+  inline
+}
+
+/// A directly-sold advertiser campaign.
+///
+/// This is an allowlist: nothing appears here without being approved, which is
+/// what makes the inventory suitable for the audience. Network fill (AdSense)
+/// is configured separately and never served through the interstitial.
+model AdCampaign {
+  id          String      @id @default(cuid())
+  /// The advertiser's name, shown to users for transparency.
+  advertiser  String
+  title       String
+  body        String?
+  imageUrl    String?
+  targetUrl   String
+  placement   AdPlacement @default(interstitial)
+  /// Relative share of impressions among eligible campaigns.
+  weight      Int         @default(1)
+  active      Boolean     @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  impressions Int         @default(0)
+  clicks      Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([active, placement])
+}
+
+/// A name the user keeps for memorial observance.
+///
+/// The yahrzeit recurs by the Hebrew calendar, so what is stored is the
+/// Gregorian date of death plus whether it fell after sunset — together they
+/// fix the Hebrew date. Storing a converted Hebrew date instead would lose
+/// that distinction, and getting it wrong moves the observance by a day every
+/// year for as long as the record lives.
+model Yahrzeit {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// How the user refers to them — "אבא", or a full name.
+  name        String
+  /// The name used for keil malei / kaddish: פלוני בן/בת פלוני.
+  hebrewName  String?
+  /// Relationship, e.g. "אב", "סבתא". Free text: families differ.
+  relation    String?
+  /// Gregorian date of death, stored date-only at UTC midnight.
+  deathDate   DateTime @db.Date
+  /// True when death occurred after sunset, making the Hebrew date the next day.
+  afterSunset Boolean  @default(false)
+  note        String?
+  /// Days ahead to remind, e.g. [7, 1, 0]. Empty means no reminders.
+  remindDaysBefore Int[] @default([7, 1, 0])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deliveries  ReminderDelivery[]
+
+  @@index([userId])
+}
+
+enum ReminderChannel {
+  inapp
+  push
+  email
+}
+
+/// A browser push endpoint. One row per device the user opted in on.
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// One reminder that has gone out.
+///
+/// The unique key is what makes dispatch idempotent: a scheduler that runs
+/// twice, or a deploy that restarts it mid-run, must not send the same
+/// memorial reminder again.
+model ReminderDelivery {
+  id         String          @id @default(cuid())
+  yahrzeitId String
+  yahrzeit   Yahrzeit        @relation(fields: [yahrzeitId], references: [id], onDelete: Cascade)
+  /// The Hebrew year of the occurrence being reminded about.
+  hebrewYear Int
+  daysBefore Int
+  channel    ReminderChannel
+  sentAt     DateTime        @default(now())
+
+  @@unique([yahrzeitId, hebrewYear, daysBefore, channel])
+  @@index([sentAt])
+}
+
+enum SubscriptionStatus {
+  /// Paying and current.
+  active
+  /// Inside a free trial — entitled, but nothing has been charged yet.
+  trialing
+  /// Payment failed; still entitled while the provider retries.
+  pastDue
+  /// Cancelled but paid up to `currentPeriodEnd`, and entitled until then.
+  canceled
+  /// Over. Not entitled.
+  expired
+}
+
+/// A paid subscription that removes advertising.
+///
+/// Provider-agnostic on purpose: `provider` plus the two provider ids are the
+/// only provider-shaped fields, so swapping billing platforms does not touch
+/// the entitlement check or anything upstream of it.
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String             @unique
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status                 SubscriptionStatus
+  /// e.g. "paddle", or "manual" for a comped account.
+  provider               String
+  providerCustomerId     String?
+  providerSubscriptionId String?            @unique
+  priceCents             Int?
+  currency               String?
+  /// Entitlement runs to here even after cancellation — the period is paid for.
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean            @default(false)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  @@index([status, currentPeriodEnd])
+}
+
+/// A billing webhook already handled.
+///
+/// Providers retry deliveries and do not promise to send each event once, so
+/// the event id is the primary key and a replay becomes a no-op.
+model BillingEvent {
+  id         String   @id
+  provider   String
+  type       String
+  receivedAt DateTime @default(now())
+
+  @@index([receivedAt])
 }

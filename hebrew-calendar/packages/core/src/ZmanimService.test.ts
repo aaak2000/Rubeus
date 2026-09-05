@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ZmanimService } from './ZmanimService.js';
 import type { GeoPoint } from './types.js';
+import { ZmanimService } from './ZmanimService.js';
 
 const svc = new ZmanimService();
 const jerusalem: GeoPoint = {
