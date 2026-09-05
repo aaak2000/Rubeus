@@ -20,6 +20,58 @@ test.describe('calendar', () => {
     await expect(page.locator('.cal-gregorian')).not.toBeEmpty();
   });
 
+  test('repeats an event weekly on the civil calendar', async ({ page, isMobile }) => {
+    await signUp(page);
+    if (isMobile) test.skip(true, 'the month grid is not the mobile default view');
+
+    const cell = page.locator('.day-cell:not(.is-outside)').nth(7);
+    await cell.hover();
+    await cell.locator('.day-add').click();
+
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('כותרת').fill('שיעור שבועי');
+    await dialog.getByLabel('תיאור').fill('מה שצריך להביא');
+    // The repeat control covers both calendars; this is the civil half, which
+    // the form could not express at all before.
+    await dialog.getByLabel('חזרה').selectOption('weekly');
+    await dialog.getByRole('button', { name: 'שמירה' }).click();
+    await expect(page.getByText('האירוע נוצר')).toBeVisible();
+
+    // Four or five same-weekday cells in a month grid, never just the one.
+    const chips = page.locator('.chip-event', { hasText: 'שיעור שבועי' });
+    expect(await chips.count()).toBeGreaterThan(3);
+
+    // Reopening restores both fields rather than showing empty ones.
+    await chips.first().click();
+    await expect(dialog.getByLabel('תיאור')).toHaveValue('מה שצריך להביא');
+    await expect(dialog.getByLabel('חזרה')).toHaveValue('weekly');
+  });
+
+  test('stops an event repeating', async ({ page, isMobile }) => {
+    await signUp(page);
+    if (isMobile) test.skip(true, 'the month grid is not the mobile default view');
+
+    const cell = page.locator('.day-cell:not(.is-outside)').nth(7);
+    await cell.hover();
+    await cell.locator('.day-add').click();
+
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('כותרת').fill('כבר לא חוזר');
+    await dialog.getByLabel('חזרה').selectOption('weekly');
+    await dialog.getByRole('button', { name: 'שמירה' }).click();
+
+    const chips = page.locator('.chip-event', { hasText: 'כבר לא חוזר' });
+    await expect(chips.first()).toBeVisible();
+
+    await chips.first().click();
+    await dialog.getByLabel('חזרה').selectOption('');
+    await dialog.getByRole('button', { name: 'שמירה' }).click();
+
+    // Back to a single occurrence — recurrence has to be removable, not just
+    // settable.
+    await expect(chips).toHaveCount(1);
+  });
+
   test('creates, edits and deletes an event', async ({ page, isMobile }) => {
     await signUp(page);
     if (isMobile) test.skip(true, 'the month grid is not the mobile default view');

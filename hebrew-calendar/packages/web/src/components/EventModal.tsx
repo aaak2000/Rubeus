@@ -10,6 +10,13 @@ import {
 import { type FormEvent, useMemo, useState } from 'react';
 import { ApiError, api, type EventInstance } from '../api/client';
 import { hebrewDayText, hebrewMonthName } from '../hebrew';
+import {
+  choiceFromRrule,
+  isComplexRrule,
+  isHebrewChoice,
+  type RecurrenceChoice,
+  rruleFor,
+} from '../recurrence';
 import { Button, ConfirmDialog, Modal, Switch, useToast } from '../ui';
 
 interface Props {
@@ -26,12 +33,19 @@ interface Props {
   onSaved: () => void;
 }
 
-const RECURRENCE_OPTIONS = [
-  { value: '', label: 'ללא חזרה' },
-  { value: 'yahrzeit', label: 'יארצייט (לפי התאריך העברי)' },
+/** Grouped so it is obvious which calendar each option repeats against. */
+const HEBREW_RECURRENCE = [
+  { value: 'yahrzeit', label: 'יארצייט' },
   { value: 'birthday', label: 'יום הולדת עברי' },
   { value: 'anniversary', label: 'יום נישואין עברי' },
-];
+] as const;
+
+const GREGORIAN_RECURRENCE = [
+  { value: 'daily', label: 'כל יום' },
+  { value: 'weekly', label: 'כל שבוע, באותו יום' },
+  { value: 'monthly', label: 'כל חודש, באותו תאריך' },
+  { value: 'yearly', label: 'כל שנה, באותו תאריך לועזי' },
+] as const;
 
 export function EventModal({ calendarId, dateIso, event, tzid, geo, onClose, onSaved }: Props) {
   const toast = useToast();
@@ -48,7 +62,14 @@ export function EventModal({ calendarId, dateIso, event, tzid, geo, onClose, onS
   );
   const [endTime, setEndTime] = useState(event ? zonedTimeKey(new Date(event.end), tzid) : '10:00');
   const [location, setLocation] = useState(event?.location ?? '');
-  const [hebrewRecurrence, setHebrewRecurrence] = useState(event?.hebrewRecurrence ?? '');
+  const [description, setDescription] = useState(event?.description ?? '');
+  // One control for both calendars — see the note on the option lists.
+  const [recurrence, setRecurrence] = useState<RecurrenceChoice>(
+    (event?.hebrewRecurrence as RecurrenceChoice) || choiceFromRrule(event?.rrule),
+  );
+  // A rule from an import or a synced provider can say more than this form
+  // has controls for. Editing the title must not quietly simplify it.
+  const foreignRule = isComplexRrule(event?.rrule);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -96,10 +117,17 @@ export function EventModal({ calendarId, dateIso, event, tzid, geo, onClose, onS
         end: endAt.toISOString(),
         allDay,
       };
-      if (location) body.location = location;
-      if (hebrewRecurrence) {
-        body.hebrewRecurrence = hebrewRecurrence;
-        body.hebrewRecurrenceDate = baseDate;
+      body.location = location || null;
+      body.description = description || null;
+
+      if (!foreignRule) {
+        // Every field is sent on every save, nulls included: leaving one out
+        // would make "no repeat" indistinguishable from "unchanged", and an
+        // event could never have its recurrence removed.
+        const hebrew = isHebrewChoice(recurrence);
+        body.hebrewRecurrence = hebrew ? recurrence : null;
+        body.hebrewRecurrenceDate = hebrew ? baseDate : null;
+        body.rrule = rruleFor(recurrence, baseDate);
       }
       if (isEdit && event) await api.updateEvent(calendarId, event.id, body);
       else await api.createEvent(calendarId, body);
@@ -225,14 +253,49 @@ export function EventModal({ calendarId, dateIso, event, tzid, geo, onClose, onS
         </label>
 
         <label className="field">
-          <span className="field-label">חזרה שנתית לפי הלוח העברי</span>
-          <select value={hebrewRecurrence} onChange={(e) => setHebrewRecurrence(e.target.value)}>
-            {RECURRENCE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
+          <span className="field-label">תיאור</span>
+          <textarea
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="לא חובה"
+          />
+        </label>
+
+        <label className="field">
+          <span className="field-label">חזרה</span>
+          <select
+            value={recurrence}
+            disabled={foreignRule}
+            onChange={(e) => setRecurrence(e.target.value as RecurrenceChoice)}
+          >
+            <option value="">ללא חזרה</option>
+            <optgroup label="לפי הלוח העברי">
+              {HEBREW_RECURRENCE.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="לפי הלוח הלועזי">
+              {GREGORIAN_RECURRENCE.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </optgroup>
           </select>
+          {foreignRule ? (
+            <span className="field-hint">
+              לאירוע הזה כלל חזרה מורכב שנוצר במקום אחר. הוא יישמר כפי שהוא.
+            </span>
+          ) : (
+            recurrence === 'yahrzeit' && (
+              <span className="field-hint">
+                חוזר בתאריך העברי — כלומר בתאריך לועזי אחר בכל שנה.
+              </span>
+            )
+          )}
         </label>
 
         {error && (

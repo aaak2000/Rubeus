@@ -203,3 +203,106 @@ describe('ICS import and export', () => {
     expect(res.body.message).toMatch(/not linked/i);
   });
 });
+
+describe('recurrence on the civil calendar', () => {
+  it('repeats weekly on the weekday the rule names', async () => {
+    // 2026-10-06 is a Tuesday.
+    const created = await createEvent({
+      title: 'שיעור שבועי',
+      start: '2026-10-06T17:00:00.000Z',
+      end: '2026-10-06T18:00:00.000Z',
+      rrule: 'FREQ=WEEKLY;BYDAY=TU',
+    }).expect(201);
+    expect(created.body.rrule).toBe('FREQ=WEEKLY;BYDAY=TU');
+
+    const res = await listEvents('2026-10-01', '2026-10-31').expect(200);
+    const days = res.body
+      .filter((e: { title: string }) => e.title === 'שיעור שבועי')
+      .map((e: { localDate: string }) => e.localDate);
+    // Every Tuesday in October 2026, and nothing else.
+    expect(days).toEqual(['2026-10-06', '2026-10-13', '2026-10-20', '2026-10-27']);
+  });
+
+  it('carries the description through', async () => {
+    const created = await createEvent({
+      title: 'עם תיאור',
+      description: 'מה שצריך לזכור על האירוע',
+      start: '2026-11-02T09:00:00.000Z',
+      end: '2026-11-02T10:00:00.000Z',
+    }).expect(201);
+    expect(created.body.description).toBe('מה שצריך לזכור על האירוע');
+
+    const res = await listEvents('2026-11-01', '2026-11-03').expect(200);
+    const row = res.body.find((e: { id: string }) => e.id === created.body.id);
+    expect(row.description).toBe('מה שצריך לזכור על האירוע');
+  });
+});
+
+describe('changing what an event repeats on', () => {
+  it('clears the Hebrew anchor when the event moves to a civil rule', async () => {
+    // The bug this pins: `x ? new Date(x) : undefined` treated an explicit
+    // null as "unchanged", so the anchor date survived a switch away from
+    // Hebrew recurrence and could never be cleared at all.
+    const created = await createEvent({
+      title: 'עובר ללועזי',
+      start: '2026-07-20T09:00:00.000Z',
+      end: '2026-07-20T10:00:00.000Z',
+      hebrewRecurrence: 'yahrzeit',
+      hebrewRecurrenceDate: '2026-07-20',
+    }).expect(201);
+    expect(created.body.hebrewRecurrenceDate).not.toBeNull();
+
+    const updated = await authPatch(`/api/calendars/${calendarId}/events/${created.body.id}`)
+      .send({
+        hebrewRecurrence: null,
+        hebrewRecurrenceDate: null,
+        rrule: 'FREQ=WEEKLY;BYDAY=MO',
+      })
+      .expect(200);
+
+    expect(updated.body.hebrewRecurrence).toBeNull();
+    expect(updated.body.hebrewRecurrenceDate).toBeNull();
+    expect(updated.body.rrule).toBe('FREQ=WEEKLY;BYDAY=MO');
+  });
+
+  it('removes recurrence entirely when both are cleared', async () => {
+    const created = await createEvent({
+      title: 'חוזר ואז לא',
+      start: '2026-08-03T09:00:00.000Z',
+      end: '2026-08-03T10:00:00.000Z',
+      rrule: 'FREQ=WEEKLY;BYDAY=MO',
+    }).expect(201);
+
+    await authPatch(`/api/calendars/${calendarId}/events/${created.body.id}`)
+      .send({ rrule: null, hebrewRecurrence: null, hebrewRecurrenceDate: null })
+      .expect(200);
+
+    const res = await listEvents('2026-08-01', '2026-08-31').expect(200);
+    const days = res.body
+      .filter((e: { title: string }) => e.title === 'חוזר ואז לא')
+      .map((e: { localDate: string }) => e.localDate);
+    // Once only — the Mondays after it are gone.
+    expect(days).toEqual(['2026-08-03']);
+  });
+
+  it('leaves a field alone when the body does not mention it', async () => {
+    const created = await createEvent({
+      title: 'עריכה חלקית',
+      description: 'תיאור מקורי',
+      start: '2026-09-07T09:00:00.000Z',
+      end: '2026-09-07T10:00:00.000Z',
+      hebrewRecurrence: 'birthday',
+      hebrewRecurrenceDate: '2026-09-07',
+    }).expect(201);
+
+    // Editing only the title must not wipe everything else.
+    const updated = await authPatch(`/api/calendars/${calendarId}/events/${created.body.id}`)
+      .send({ title: 'כותרת חדשה' })
+      .expect(200);
+
+    expect(updated.body.title).toBe('כותרת חדשה');
+    expect(updated.body.description).toBe('תיאור מקורי');
+    expect(updated.body.hebrewRecurrence).toBe('birthday');
+    expect(updated.body.hebrewRecurrenceDate).not.toBeNull();
+  });
+});

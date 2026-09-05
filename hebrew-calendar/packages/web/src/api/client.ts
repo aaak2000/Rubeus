@@ -135,6 +135,8 @@ export interface EventInstance {
   /** True when the two differ — the event falls in the evening. */
   isEvening: boolean;
   hebrewRecurrence: string | null;
+  /** iCalendar recurrence, when the event repeats on the civil calendar. */
+  rrule: string | null;
   hebrew: { text: string; monthName: string; day: number; year: number };
 }
 export interface CalendarItem {

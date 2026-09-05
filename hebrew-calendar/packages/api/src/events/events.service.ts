@@ -161,9 +161,11 @@ export class EventsService {
         allDay: dto.allDay,
         rrule: dto.rrule,
         hebrewRecurrence: dto.hebrewRecurrence,
-        hebrewRecurrenceDate: dto.hebrewRecurrenceDate
-          ? new Date(dto.hebrewRecurrenceDate)
-          : undefined,
+        // A field left out of the body means "unchanged"; one sent as null
+        // means "clear it". Collapsing the two — as `x ? new Date(x) :
+        // undefined` did — left the anchor date behind when an event was
+        // switched off Hebrew recurrence, and made it unclearable at all.
+        hebrewRecurrenceDate: nullableDate(dto.hebrewRecurrenceDate),
       },
     });
   }
@@ -278,4 +280,10 @@ const MAX_RANGE_MS = 3 * 366 * DAY_MS;
  */
 function dateOnlyKey(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+
+/** undefined stays undefined (leave it alone); null clears; a string parses. */
+function nullableDate(value: string | null | undefined): Date | null | undefined {
+  if (value === undefined) return undefined;
+  return value === null ? null : new Date(value);
 }
